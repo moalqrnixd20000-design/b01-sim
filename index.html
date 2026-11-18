@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>B01 Mission Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&family=Readex+Pro:wght@300..700&display=swap">
+<style>
+/* Same night palette and type as the Security Center console. The 3D sea fills the screen;
+   the HUD sits on its edges so the vessel stays in the middle. */
+:root{
+  color-scheme:dark;
+  --abyss:#08111d; --hull:#0e1a2b; --facet:#152539; --chine:#22364e; --chine-2:#2f4a67;
+  --veil:rgba(8,17,29,.78);
+  --fg:#dce6ef; --fg-2:#a6b8ca; --fg-3:#7a91ab;
+  --sea:#3e9aa3; --sea-hi:#8fd6cf;
+  --target:#ff6b45; --on-target:#1a0905; --trust:#a99cff; --caution:#f2b84b;
+  --f-text:"Readex Pro","Noto Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  --f-num:"B612 Mono","Cascadia Mono",Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--abyss);color:var(--fg);font-family:var(--f-text);-webkit-font-smoothing:antialiased}
+body{touch-action:none;user-select:none;-webkit-user-select:none}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--sea-hi);outline-offset:2px}
+.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.plate{clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+#view{position:fixed;inset:0}
+#view canvas{display:block;width:100%;height:100%}
+
+/* HUD */
+.top{position:fixed;top:max(10px,env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;z-index:3}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--veil);font-size:14px;font-weight:600}
+.brand small{font-weight:400;font-size:11px;color:var(--fg-2);padding:0 6px;box-shadow:inset 0 0 0 1px var(--chine-2)}
+.stat{display:flex;flex-direction:column;justify-content:center;padding:4px 12px;background:var(--veil);min-width:84px}
+.stat span:first-child{font-size:11px;color:var(--fg-3)}
+.stat .n{font-size:16px;font-weight:700}
+.stat.score .n{color:var(--sea-hi)}
+.spacer{flex:1}
+.btn{padding:8px 14px;background:var(--veil);font-size:13px;color:var(--fg)}
+.btn:hover{background:var(--facet)}
+.btn[aria-pressed="true"]{box-shadow:inset 0 -2px 0 var(--sea)}
+
+.panel{position:fixed;z-index:2;background:var(--veil);padding:8px}
+.panel h2{margin:0 0 6px;font-size:12px;font-weight:500;color:var(--fg-2)}
+.panel canvas{display:block;width:100%;height:100%}
+.minimap{top:72px;left:max(12px,env(safe-area-inset-left,0px));width:250px}
+.minimap .cv{height:166px}
+.sonar{top:72px;right:max(12px,env(safe-area-inset-right,0px));width:280px}
+.sonar .cv{height:150px}
+
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:3;padding:8px 16px;background:var(--veil);font-size:14px;white-space:nowrap}
+.toast.warn{color:var(--caution)}
+.toast.hit{color:var(--target)}
+.caption{position:fixed;bottom:max(26px,env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:3;width:min(720px,calc(100% - 32px));text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.caption p{margin:0;padding:10px 18px;background:var(--veil);font-size:18px;line-height:1.6}
+.caption .press{font-size:14px;color:var(--sea-hi);padding:6px 14px;animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.55}}
+
+/* touch controls: physical left = steering, physical right = speed, whatever the language */
+.touch{position:fixed;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:3;display:flex;gap:10px}
+.touch.steer{left:max(16px,env(safe-area-inset-left,0px))}
+.touch.throttle{right:max(16px,env(safe-area-inset-right,0px));flex-direction:column}
+.tbtn{width:78px;height:78px;display:grid;place-items:center;background:var(--veil);font-size:13px;color:var(--fg);box-shadow:inset 0 0 0 1px var(--chine-2)}
+.tbtn svg{width:30px;height:30px}
+.tbtn.on{background:var(--facet);box-shadow:inset 0 0 0 2px var(--sea-hi)}
+.tbtn.wide{width:auto;height:46px;padding:0 14px}
+.hint{position:fixed;bottom:max(14px,env(safe-area-inset-bottom,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:2;font-size:12px;color:var(--fg-2);background:var(--veil);padding:6px 10px}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:16px;background:rgba(8,17,29,.55)}
+.card{width:min(640px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--hull);padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+.card h3{margin:0;font-size:22px;font-weight:600;line-height:1.35}
+.card p{margin:0;font-size:15px;line-height:1.8;color:var(--fg-2)}
+.card .row{display:flex;gap:8px;flex-wrap:wrap}
+.cta{padding:11px 18px;font-size:15px;font-weight:600;background:var(--sea-hi);color:var(--abyss)}
+.cta.alt{background:var(--facet);color:var(--fg);box-shadow:inset 0 0 0 1px var(--chine-2);font-weight:500}
+.cta.danger{background:transparent;color:var(--fg-2);box-shadow:inset 0 0 0 1px var(--chine-2);font-weight:500}
+.cta[disabled]{opacity:.4;cursor:not-allowed}
+
+.hand{width:min(760px,100%)}
+.hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.lvl{display:inline-block;padding:0 8px;line-height:22px;font-size:12px;background:var(--target);color:var(--on-target)}
+.lvl.pot{background:transparent;color:var(--target);box-shadow:inset 0 0 0 1px var(--target)}
+.conf{text-align:center;min-width:90px}
+.conf .n{font-size:40px;font-weight:700;color:var(--target);line-height:1}
+.conf small{display:block;font-size:12px;color:var(--fg-3);margin-top:4px}
+.hbody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px}
+.snip{background:var(--abyss);padding:6px}
+.snip .cv{height:200px}
+.snip small{display:block;font-size:11px;color:var(--fg-3);margin-top:4px}
+.ev{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ev li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:start;font-size:14px;line-height:1.5}
+.ev li b{display:block;font-weight:500}
+.ev li span.d{font-size:12.5px;color:var(--fg-2)}
+.ev li.no b,.ev li.no span.d{color:var(--fg-3)}
+.mark{width:16px;height:16px;margin-top:3px;border-radius:50%;background:var(--target)}
+.no .mark{background:transparent;box-shadow:inset 0 0 0 1.5px var(--fg-3)}
+.fb{padding:10px 12px;background:var(--abyss);font-size:14px;color:var(--fg)}
+.res{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.res div{background:var(--abyss);padding:10px 12px}
+.res span{display:block;font-size:12px;color:var(--fg-3)}
+.res .n{font-size:22px;font-weight:700}
+.best{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--fg-2)}
+.best li{display:flex;justify-content:space-between;background:var(--abyss);padding:5px 10px}
+.best li.me{color:var(--sea-hi)}
+
+@media (max-width:820px){
+  .minimap{width:190px}.minimap .cv{height:126px}
+  .sonar{width:210px}.sonar .cv{height:112px}
+  .stat{min-width:70px;padding:4px 8px}
+  .hbody{grid-template-columns:minmax(0,1fr)}
+  .caption p{font-size:15px}
+}
+@media (prefers-reduced-motion:reduce){.caption .press{animation:none}}
+</style>
+</head>
+<body>
+<div id="view"></div>
+
+<header class="top" aria-label="حالة المهمة">
+  <div class="brand plate"><span data-t="title">محاكاة مهمة B01</span><small data-t="sim">بيانات محاكاة</small></div>
+  <div class="stat plate"><span data-t="time">الوقت</span><span class="n" id="s-time">4:00</span></div>
+  <div class="stat plate"><span data-t="cov">التغطية</span><span class="n" id="s-cov">0%</span></div>
+  <div class="stat plate"><span data-t="speed">السرعة</span><span class="n" id="s-speed">0.0 kn</span></div>
+  <div class="stat plate"><span data-t="batt">البطارية</span><span class="n" id="s-batt">86%</span></div>
+  <div class="stat plate score"><span data-t="score">النقاط</span><span class="n" id="s-score">0</span></div>
+  <div class="spacer"></div>
+  <button class="btn plate" id="b-auto" aria-pressed="true" data-t="auto">طيار آلي</button>
+  <button class="btn plate" id="b-cam" data-t="cam">الكاميرا</button>
+  <button class="btn plate" id="b-lang">English</button>
+</header>
+
+<section class="panel plate minimap" aria-labelledby="mm-t"><h2 id="mm-t" data-t="map">منطقة المسح</h2><div class="cv"><canvas id="mm"></canvas></div></section>
+<section class="panel plate sonar" aria-labelledby="so-t"><h2 id="so-t" data-t="sonar">عمود الماء، ملتي بيم</h2><div class="cv"><canvas id="wcd"></canvas></div></section>
+
+<div class="toast plate" id="toast" role="status" aria-live="polite" hidden></div>
+
+<div class="caption" id="caption">
+  <p id="cap-text"></p>
+  <span class="press plate" data-t="press">اضغط أي زر أو المس الشاشة لتتولى القيادة</span>
+</div>
+
+<div class="touch steer" id="t-steer" hidden>
+  <button class="tbtn plate" data-k="left" aria-label="يسار"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+  <button class="tbtn plate" data-k="right" aria-label="يمين"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 L16 12 L9 19" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+</div>
+<div class="touch throttle" id="t-thr" hidden>
+  <button class="tbtn plate" data-k="up" aria-label="أسرع"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15 L12 8 L19 15" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+  <button class="tbtn plate" data-k="down" aria-label="أبطأ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9 L12 16 L19 9" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
+</div>
+<p class="hint plate" id="hint" hidden data-t="keys">الأسهم للقيادة، المسافة للطيار الآلي، C للكاميرا</p>
+
+<!-- briefing -->
+<div class="overlay" id="o-brief" hidden>
+  <div class="card plate" role="dialog" aria-labelledby="br-t">
+    <h3 id="br-t" data-t="b_title">مهمتك</h3>
+    <p data-t="b_body"></p>
+    <p data-t="b_tip"></p>
+    <p id="br-ctrl"></p>
+    <div class="row"><button class="cta" id="b-start" data-t="start">ابدأ المهمة</button></div>
+  </div>
+</div>
+
+<!-- handover package -->
+<div class="overlay" id="o-hand" hidden>
+  <div class="card hand plate" role="dialog" aria-labelledby="h-t">
+    <div class="hhead">
+      <div>
+        <span class="lvl" id="h-lvl"></span>
+        <h3 id="h-t" data-t="h_title">هدف مشتبه: لغم مربوط محتمل</h3>
+      </div>
+      <div class="conf"><span class="n" id="h-conf">61%</span><small data-t="h_conf">ثقة النموذج</small></div>
+    </div>
+    <div class="hbody">
+      <figure class="snip" style="margin:0"><div class="cv"><canvas id="snip"></canvas></div><small data-t="snip">مقطع عمود الماء حول الهدف</small></figure>
+      <ul class="ev" id="h-ev"></ul>
+    </div>
+    <p class="fb" id="h-fb" hidden></p>
+    <div class="row" id="h-act">
+      <button class="cta" id="d-hand" data-t="d_hand">تسليم لفريق التحقق</button>
+      <button class="cta alt" id="d-cross" data-t="d_cross">طلب تمريرة متقاطعة</button>
+      <button class="cta danger" id="d-reject" data-t="d_reject">رفض كإنذار كاذب</button>
+    </div>
+    <div class="row" id="h-cont" hidden><button class="cta" id="d-cont" data-t="cont">متابعة المهمة</button></div>
+  </div>
+</div>
+
+<!-- results -->
+<div class="overlay" id="o-res" hidden>
+  <div class="card plate" role="dialog" aria-labelledby="r-t">
+    <h3 id="r-t" data-t="r_title">انتهت المهمة</h3>
+    <div class="res">
+      <div><span data-t="score">النقاط</span><b class="n" id="r-score">0</b></div>
+      <div><span data-t="cov">التغطية</span><b class="n" id="r-cov">0%</b></div>
+      <div><span data-t="r_dec">قرار الهدف</span><b id="r-dec" style="font-size:15px;font-weight:600"></b></div>
+    </div>
+    <p data-t="r_best" style="color:var(--fg)">أفضل النتائج</p>
+    <ol class="best" id="r-best"></ol>
+    <div class="row"><button class="cta" id="b-again" data-t="again">العب مرة ثانية</button></div>
+  </div>
+</div>
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
