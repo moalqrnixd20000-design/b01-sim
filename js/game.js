@@ -71,7 +71,7 @@ const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
 const AREA={x0:-100,x1:100,y0:-62.5,y1:62.5},SP=25,SW=14,RUN=28,DEPTH=18,TXD=1.2,CELL=5;
 const NA=5,NB=8,NX=Math.round((AREA.x1-AREA.x0)/CELL),NY=Math.round((AREA.y1-AREA.y0)/CELL);
 const A_Y=i=>AREA.y0+SP/2+i*SP,B_X=j=>AREA.x0+SP/2+j*SP;
-const MINE={x:35,y:8,z:9};
+const MINE={x:35,y:8,z:9},IDLE_MS=60000;
 const MISSION=240,RATE=3,MAXV=3.0,MAXYAW=22*D2R;
 function buildRoute(){
   const r=[];
@@ -263,17 +263,22 @@ function renderHand(){
   $('#d-cross').disabled=e.cons;
   requestAnimationFrame(drawSnip);
 }
-function openHand(){S.paused=true;S.mine.fb='';S.keys={left:0,right:0,up:0,down:0};renderHand();$('#o-hand').hidden=false;$('#d-hand').focus();}
+function openHand(){S.paused=true;S.lastInput=performance.now();S.mine.fb='';S.keys={left:0,right:0,up:0,down:0};renderHand();$('#o-hand').hidden=false;$('#o-hand .card').scrollTop=0;$('#d-hand').focus({preventScroll:true});}
 function decide(kind){
   const e=evidence(),m=S.mine;
   if(kind==='hand'){S.score+=e.conf>=80?300:120;m.state='handed';S.decision='hand';m.fb=e.conf>=80?'f_hand_good':'f_hand_weak';}
   if(kind==='reject'){S.score-=150;m.state='rejected';S.decision='reject';m.fb='f_reject';}
   if(kind==='cross'){S.score+=40;m.state='cross';S.decision='cross';m.fb='f_cross';
-    const first=m.obs[0].axis,ns=first===1;/* first seen on an east-west run, so cross north-south */
-    const a=ns?[MINE.x,MINE.y+RUN+30]:[MINE.x-RUN-30,MINE.y],b=ns?[MINE.x,MINE.y-RUN-30]:[MINE.x+RUN+30,MINE.y];
+    /* first seen on an east-west run, so cross north-south; the leg runs far enough past the target
+       that the boat has finished its turn and is straight again before it reaches it */
+    const ns=m.obs[0].axis===1,D=RUN+62;
+    const a=ns?[MINE.x,MINE.y+D]:[MINE.x-D,MINE.y],b=ns?[MINE.x,MINE.y-D]:[MINE.x+D,MINE.y];
     m.cross=[a,b];crossGuide.geometry.setFromPoints([W(a[0],a[1],1),W(b[0],b[1],1)]);crossGuide.computeLineDistances();crossGuide.visible=true;
-    const bt=S.boat,near=Math.hypot(a[0]-bt.x,a[1]-bt.y)<=Math.hypot(b[0]-bt.x,b[1]-bt.y);
-    S.queue=near?[a,b]:[b,a];S.legFrom=[bt.x,bt.y];}
+    const bt=S.boat,near=Math.hypot(a[0]-bt.x,a[1]-bt.y)<=Math.hypot(b[0]-bt.x,b[1]-bt.y),E1=near?a:b,E2=near?b:a;
+    const ux=(E2[0]-E1[0])/(2*D),uy=(E2[1]-E1[1])/(2*D),side=((bt.x-E1[0])*uy-(bt.y-E1[1])*ux)>=0?1:-1;
+    const wide=[E1[0]+uy*side*36,E1[1]-ux*side*36];/* bulb turn: swing out beside the near end, then come back onto the line */
+    const resume=[bt.x-Math.sin(bt.h)*20,bt.y-Math.cos(bt.h)*20];/* back to where the survey line was left */
+    S.queue=[wide,E1,E2,resume];S.legFrom=[bt.x,bt.y];}
   setMine3D();renderHand();updateHud(true);
 }
 $('#d-hand').addEventListener('click',()=>decide('hand'));
@@ -291,12 +296,12 @@ function observe(axis,across){
 }
 
 function endMission(){
-  S.paused=true;S.mode='results';
-  const covPct=Math.round(S.covPct*100);const total=Math.max(0,Math.round(S.score+covPct*3));
+  S.paused=true;S.mode='results';S.lastInput=performance.now();
+  calcCov();const covPct=Math.round(S.covPct*100);const total=Math.max(0,Math.round(S.score+covPct*3));
   $('#r-score').textContent=total;$('#r-cov').textContent=covPct+'%';
   $('#r-dec').textContent=t({hand:'dec_hand',reject:'dec_reject',cross:'dec_cross',none:'dec_none'}[S.decision]);
   const best=store.get('b01sim.best',[]);const me={s:total,c:covPct,d:Date.now()};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set('b01sim.best',top);
-  $('#r-best').innerHTML=top.map((b,i)=>'<li class="'+(b.d===me.d?'me':'')+'"><span class="n">'+(i+1)+'</span><span class="n">'+b.s+'</span><span class="n">'+b.c+'%</span></li>').join('');
+  $('#r-best').innerHTML='<li class="hd"><span></span><span>'+t('score')+'</span><span>'+t('cov')+'</span></li>'+top.map((b,i)=>'<li class="'+(b.d===me.d?'me':'')+'"><span class="n">'+(i+1)+'</span><span class="n">'+b.s+'</span><span class="n">'+b.c+'%</span></li>').join('');
   $('#o-res').hidden=false;$('#b-again').focus();showControls();
 }
 
@@ -335,7 +340,6 @@ function step(dt){
   if(S.trail.length===0||Math.hypot(S.trail[S.trail.length-1][0]-b.x,S.trail[S.trail.length-1][1]-b.y)>3){S.trail.push([b.x,b.y]);if(S.trail.length>400)S.trail.shift();}
   if(S.mode==='play'){
     if(S.time>=MISSION||(S.mine.state==='handed'&&S.covPct>=.8)){endMission();return;}
-    if(performance.now()-S.lastInput>60000&&!S.auto)toAttract();
   }
 }
 
@@ -353,9 +357,10 @@ function updateCamera(dt,tt){
 
 /* ---------------- HUD: stats, minimap, sonar ---------------- */
 let hudT=0;
+function calcCov(){let c=0;for(let i=0;i<S.cov.length;i++)if(S.cov[i])c++;S.covPct=c/S.cov.length;}
 function updateHud(force){
   const now=performance.now();if(!force&&now-hudT<120)return;hudT=now;
-  let c=0;for(let i=0;i<S.cov.length;i++)if(S.cov[i])c++;S.covPct=c/S.cov.length;
+  calcCov();
   const left=Math.max(0,MISSION-S.time),mm=Math.floor(left/60),ss=Math.floor(left%60);
   $('#s-time').textContent=S.mode==='play'?mm+':'+String(ss).padStart(2,'0'):'—';
   $('#s-cov').textContent=Math.round(S.covPct*100)+'%';
@@ -430,6 +435,8 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;
   if(S.mode==='attract'||S.mode==='play'||S.mode==='brief'){if(!S.paused&&S.mode!=='brief')step(dt);else if(S.mode==='brief'&&S.auto)step(dt);}
   if(S.mode==='attract'){S.capT+=dt;if(S.capT>6.5){S.capT=0;S.capIdx=(S.capIdx+1)%5;$('#cap-text').textContent=t('a'+(S.capIdx+1));}}
+  /* back to the attract demo after 60 s without input, on any screen; a mission running on autopilot is left to finish */
+  else if(!(S.mode==='play'&&S.auto&&!S.paused)&&now-S.lastInput>IDLE_MS)toAttract();
   const b=S.boat,bp=W(b.x,b.y,0);
   const wy=waveH(bp.x,bp.z,tt),wx1=waveH(bp.x+2,bp.z,tt)-waveH(bp.x-2,bp.z,tt),wz1=waveH(bp.x,bp.z+2,tt)-waveH(bp.x,bp.z-2,tt);
   b01.position.set(bp.x,wy*.6+.05,bp.z);b01.rotation.set(0,0,0);b01.rotateY(Math.PI/2-b.h);b01.rotateZ(Math.atan2(wx1*Math.sin(b.h)-wz1*Math.cos(b.h),8)*.6);b01.rotateX(Math.atan2(wx1*Math.cos(b.h)+wz1*Math.sin(b.h),8)*-.6);
