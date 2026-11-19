@@ -83,8 +83,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 .hand{width:min(760px,100%)}
 .hhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
-.lvl{display:inline-block;padding:0 8px;line-height:22px;font-size:12px;background:var(--target);color:var(--on-target)}
-.lvl.pot{background:transparent;color:var(--target);box-shadow:inset 0 0 0 1px var(--target)}
+.hmeta{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.lvl{display:inline-block;padding:0 8px;line-height:22px;font-size:12px}
+.lv-high{background:var(--target);color:var(--on-target)}
+.lv-potential{color:var(--target);box-shadow:inset 0 0 0 1px var(--target)}
+.lv-unknown{color:var(--fg);outline:1px dashed var(--fg-2);outline-offset:-1px}
+.lv-none{color:var(--sea-hi);box-shadow:inset 0 0 0 1px var(--sea)}
+.tid{font-size:12px;color:var(--fg-3)}
+.hand[data-lv="unknown"] .mark{background:var(--fg-2)}
+.hand[data-lv="unknown"] .conf .n{color:var(--fg)}
+.hand[data-lv="none"] .mark{background:var(--sea-hi)}
+.hand[data-lv="none"] .conf .n{color:var(--sea-hi)}
+/* mission time in the briefing */
+.tsel{display:flex;flex-direction:column;gap:9px;padding:12px 14px;background:var(--abyss)}
+.tsel>span{font-size:13px;color:var(--fg-2)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.segb{padding:9px 14px;font-size:14px;background:var(--facet);box-shadow:inset 0 0 0 1px var(--chine-2)}
+.segb[aria-pressed="true"]{background:var(--sea-hi);color:var(--abyss);box-shadow:none;font-weight:600}
+.stepper{display:flex;align-items:center;gap:10px}
+.stb{width:42px;height:42px;display:grid;place-items:center;background:var(--facet);box-shadow:inset 0 0 0 1px var(--chine-2);font-size:20px;line-height:1}
+.stepper output{min-width:7.5em;text-align:center;font-size:16px;font-weight:600}
+.tsel small{font-size:12.5px;line-height:1.6;color:var(--fg-3)}
+/* targets on the results card */
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13.5px}
+.tl li{display:grid;grid-template-columns:3.6em minmax(0,1.2fr) minmax(0,1fr) 1.4em;gap:8px;align-items:center;background:var(--abyss);padding:6px 10px}
+.tl .n{color:var(--fg-3);font-size:12px}
+.tl .d{color:var(--fg-2)}
+.tl .ok{color:var(--sea-hi);font-weight:700;text-align:center}
+.tl .bad{color:var(--target);font-weight:700;text-align:center}
 .conf{text-align:center;min-width:90px}
 .conf .n{font-size:40px;font-weight:700;color:var(--target);line-height:1}
 .conf small{display:block;font-size:12px;color:var(--fg-3);margin-top:4px}
@@ -101,7 +127,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .mark{width:16px;height:16px;margin-top:3px;border-radius:50%;background:var(--target)}
 .no .mark{background:transparent;box-shadow:inset 0 0 0 1.5px var(--fg-3)}
 .fb{padding:10px 12px;background:var(--abyss);font-size:14px;color:var(--fg)}
-.res{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.res{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .res div{background:var(--abyss);padding:10px 12px}
 .res span{display:block;font-size:12px;color:var(--fg-3)}
 .res .n{font-size:22px;font-weight:700}
@@ -121,6 +147,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .sonar{width:210px}.sonar .cv{height:112px}
   .stat{min-width:70px;padding:4px 8px}
   .hbody{grid-template-columns:minmax(0,1fr)}
+  .res{grid-template-columns:repeat(2,minmax(0,1fr))}
   .caption p{font-size:15px}
 }
 @media (prefers-reduced-motion:reduce){.caption .press{animation:none}}
@@ -131,8 +158,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 <header class="top" aria-label="حالة المهمة">
   <div class="brand plate"><span data-t="title">محاكاة مهمة B01</span><small data-t="sim">بيانات محاكاة</small></div>
-  <div class="stat plate"><span data-t="time">الوقت</span><span class="n" id="s-time">4:00</span></div>
+  <div class="stat plate"><span id="s-time-l">الوقت</span><span class="n" id="s-time">—</span></div>
   <div class="stat plate"><span data-t="cov">التغطية</span><span class="n" id="s-cov">0%</span></div>
+  <div class="stat plate"><span data-t="tgs">الأهداف</span><span class="n" id="s-tg">0/4</span></div>
   <div class="stat plate"><span data-t="speed">السرعة</span><span class="n" id="s-speed">0.0 kn</span></div>
   <div class="stat plate"><span data-t="batt">البطارية</span><span class="n" id="s-batt">86%</span></div>
   <div class="stat plate score"><span data-t="score">النقاط</span><span class="n" id="s-score">0</span></div>
@@ -168,6 +196,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <h3 id="br-t" data-t="b_title">مهمتك</h3>
     <p data-t="b_body"></p>
     <p data-t="b_tip"></p>
+    <div class="tsel" role="group" aria-labelledby="ts-l">
+      <span id="ts-l" data-t="t_label">مدة المهمة</span>
+      <div class="seg">
+        <button class="segb plate" id="t-free" aria-pressed="true" data-t="t_free">حتى يكتمل المسح</button>
+        <button class="segb plate" id="t-set" aria-pressed="false" data-t="t_set">وقت أحدده</button>
+      </div>
+      <div class="stepper" id="t-step" hidden>
+        <button class="stb plate" id="t-minus" data-tl="less" aria-label="أقل">−</button>
+        <output id="t-val" aria-live="polite">5 دقائق</output>
+        <button class="stb plate" id="t-plus" data-tl="more" aria-label="أكثر">+</button>
+      </div>
+      <small id="t-note"></small>
+    </div>
     <p id="br-ctrl"></p>
     <div class="row"><button class="cta" id="b-start" data-t="start">ابدأ المهمة</button></div>
   </div>
@@ -178,8 +219,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <div class="card hand plate" role="dialog" aria-labelledby="h-t">
     <div class="hhead">
       <div>
-        <span class="lvl" id="h-lvl"></span>
-        <h3 id="h-t" data-t="h_title">هدف مشتبه: لغم مربوط محتمل</h3>
+        <div class="hmeta"><span class="lvl" id="h-lvl"></span><span class="tid n" id="h-id"></span></div>
+        <h3 id="h-t"></h3>
       </div>
       <div class="conf"><span class="n" id="h-conf">61%</span><small data-t="h_conf">ثقة النموذج</small></div>
     </div>
@@ -189,9 +230,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     </div>
     <p class="fb" id="h-fb" hidden></p>
     <div class="row" id="h-act">
-      <button class="cta" id="d-hand" data-t="d_hand">تسليم لفريق التحقق</button>
+      <button class="cta alt" id="d-hand" data-t="d_hand">تسليم لفريق التحقق</button>
       <button class="cta alt" id="d-cross" data-t="d_cross">طلب تمريرة متقاطعة</button>
-      <button class="cta danger" id="d-reject" data-t="d_reject">رفض كإنذار كاذب</button>
+      <button class="cta alt" id="d-clear" data-t="d_clear">غير خطِر، تابع المسح</button>
     </div>
     <div class="row" id="h-cont" hidden><button class="cta" id="d-cont" data-t="cont">متابعة المهمة</button></div>
   </div>
@@ -204,8 +245,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <div class="res">
       <div><span data-t="score">النقاط</span><b class="n" id="r-score">0</b></div>
       <div><span data-t="cov">التغطية</span><b class="n" id="r-cov">0%</b></div>
-      <div><span data-t="r_dec">قرار الهدف</span><b id="r-dec" style="font-size:15px;font-weight:600"></b></div>
+      <div><span data-t="r_ok">قرارات صحيحة</span><b class="n" id="r-ok">0/4</b></div>
+      <div><span data-t="r_time">الزمن</span><b class="n" id="r-time">0:00</b></div>
     </div>
+    <ul class="tl" id="r-tg"></ul>
     <p data-t="r_best" style="color:var(--fg)">أفضل النتائج</p>
     <ol class="best" id="r-best"></ol>
     <div class="row"><button class="cta" id="b-again" data-t="again">العب مرة ثانية</button></div>
