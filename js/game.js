@@ -229,6 +229,21 @@ function drawEmblem(c){
   [[1.95,58,24],[1.45,62,16],[.95,60,6],[.45,52,-4]].forEach(([a,L,dp])=>{frond(-a,L,dp);frond(a,L,dp);});frond(0,38,-12);
   c.beginPath();c.arc(cx,crown[1]+2,6,0,Math.PI*2);c.fill();
 }
+/* the national flag, 3:2: green field, the shahada in white with the sword beneath it. The flag is the same on both faces:
+   the text reads right to left and the sword points left (hilt on the right) on either side of the hull, never mirrored.
+   The shahada is set in Amiri (classical Naskh) as a stand-in for the official Thuluth calligraphy. */
+const SHAHADA='لا إله إلا الله محمد رسول الله',FLAG_FONT='"Amiri", "Noto Naskh Arabic", "Traditional Arabic", "Segoe UI", Tahoma, serif';
+function drawFlag(c){
+  const Wd=600,Ht=400;c.clearRect(0,0,Wd,Ht);c.fillStyle='#006c35';c.fillRect(0,0,Wd,Ht);
+  c.fillStyle='#ffffff';c.direction='rtl';c.textAlign='center';c.textBaseline='alphabetic';
+  c.font='700 80px '+FLAG_FONT;const fs=Math.min(96,80*470/c.measureText(SHAHADA).width);c.font='700 '+fs.toFixed(1)+'px '+FLAG_FONT;
+  c.fillText(SHAHADA,Wd/2,Ht*.5);
+  const y=Ht*.71;
+  c.beginPath();c.moveTo(428,y-7);c.lineTo(152,y-7);c.quadraticCurveTo(124,y-8,106,y-19);c.quadraticCurveTo(124,y+4,152,y+7);c.lineTo(428,y+7);c.closePath();c.fill();
+  c.fillRect(428,y-18,10,36);
+  c.fillRect(438,y-6,42,12);
+  c.beginPath();c.moveTo(479,y-6);c.quadraticCurveTo(499,y-5,501,y+16);c.lineTo(491,y+16);c.quadraticCurveTo(489,y+7,479,y+6);c.closePath();c.fill();
+}
 function drawHullNo(c){c.clearRect(0,0,256,96);c.font='600 70px "Readex Pro", "Segoe UI", sans-serif';c.fillStyle='#c6d6e5';c.textBaseline='middle';c.direction='ltr';c.textAlign='left';c.fillText('B01',18,52);}
 const decals=[];
 function decalTex(w,h,draw){const cv=document.createElement('canvas');cv.width=w;cv.height=h;draw(cv.getContext('2d'));const tex=new THREE.CanvasTexture(cv);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=4;decals.push({cv,tex,draw});return tex;}
@@ -277,6 +292,10 @@ function buildB01(){
   const numMat=new THREE.MeshStandardMaterial({map:num,transparent:true,alphaTest:.04,roughness:.8,emissive:0xffffff,emissiveMap:num,emissiveIntensity:.18,polygonOffset:true,polygonOffsetFactor:-2,depthWrite:false});
   hullDecal(g,emb,.86,.86,-.35,.7,1.3,.18,0,embMat);
   hullDecal(g,num,1.0,.375,2.62,.7,.9,.28,.24,numMat);
+  /* the national flag painted near the stern (a painted flag, not a cloth one, keeps the low radar signature) */
+  const flag=decalTex(600,400,drawFlag);
+  const flagMat=new THREE.MeshStandardMaterial({map:flag,roughness:.6,metalness:.1,emissive:0xffffff,emissiveMap:flag,emissiveIntensity:.22,polygonOffset:true,polygonOffsetFactor:-2,depthWrite:false});
+  hullDecal(g,flag,.9,.6,-2.55,.66,1.25,.19,-.06,flagMat);
   /* sonar fan: clean water column inside the minimum slant range, the rest is the dead zone */
   const fan=(r0,r1,col,op)=>{const pts=[],A=55*D2R,N=24;for(let k=0;k<N;k++){const a0=-A+2*A*k/N,a1=-A+2*A*(k+1)/N;const p=(a,r)=>[0,-TXD-r*Math.cos(a),r*Math.sin(a)];const q=(a)=>Math.min(r1,(DEPTH-TXD)/Math.cos(a));
       const i0=p(a0,r0),i1=p(a1,r0),o0=p(a0,q(a0)),o1=p(a1,q(a1));pts.push(...i0,...o0,...o1,...i0,...o1,...i1);}
@@ -511,7 +530,7 @@ function updateCamera(dt,tt){
   let want,look;
   if(S.mode==='attract'||S.mode==='brief'){const a=tt*.07;want=bp.clone().add(new THREE.Vector3(Math.cos(a)*13,3.4+1.2*Math.sin(tt*.13),Math.sin(a)*13));look=bp.clone().add(new THREE.Vector3(0,.7,0));}
   else if(S.cam==='top'){want=bp.clone().add(new THREE.Vector3(0,120,40));look=bp.clone();}
-  else if(S.cam==='side'){want=bp.clone().addScaledVector(right,9.5).addScaledVector(fwd,1.2).add(new THREE.Vector3(0,2.1,0));look=bp.clone().addScaledVector(fwd,.4).add(new THREE.Vector3(0,.8,0));}
+  else if(S.cam==='side'){want=bp.clone().addScaledVector(right,9.5*(S.camSide||1)).addScaledVector(fwd,1.2).add(new THREE.Vector3(0,2.1,0));look=bp.clone().addScaledVector(fwd,.4).add(new THREE.Vector3(0,.8,0));}
   else{want=bp.clone().addScaledVector(fwd,-15).addScaledVector(right,5.5).add(new THREE.Vector3(0,5.8,0));look=bp.clone().addScaledVector(fwd,5).add(new THREE.Vector3(0,1.2,0));}
   const k=clamp(dt*2.4,0,1);camPos.lerp(want,k);camLook.lerp(look,k);
   camera.position.copy(camPos);camera.lookAt(camLook);sky.position.copy(camera.position);
@@ -642,12 +661,15 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,
   advance(sec,dt){dt=dt||1/30;const n=Math.round(sec/dt);for(let i=0;i<n;i++){if(!S.paused&&(S.mode==='attract'||S.mode==='play'))step(dt);}
     updateCamera(1,performance.now()/1000);last=performance.now();frame(performance.now());updateHud(true);drawMinimap();drawWCD();
     return {mode:S.mode,time:+S.time.toFixed(1),real:+S.real.toFixed(1),x:+S.boat.x.toFixed(1),y:+S.boat.y.toFixed(1),cov:Math.round(S.covPct*100),covA:Math.round(S.covA*100),covB:Math.round(S.covB*100),
       tg:S.tg.map(x=>x.kind+':'+x.state+(x.id?'('+x.id+')':'')).join(' '),cur:S.cur&&S.cur.kind,pend:S.pend.length,paused:S.paused,wp:S.wp,routeDone:S.routeDone};}};
 
 resetScenario('attract');applyLang();toAttract();
-if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{decals.forEach(d=>{d.draw(d.cv.getContext('2d'));d.tex.needsUpdate=true;});applyLang();});
+/* redraw the hull decals once the web fonts arrive (Amiri for the flag is fetched only when asked for) */
+const redrawDecals=()=>decals.forEach(d=>{d.draw(d.cv.getContext('2d'));d.tex.needsUpdate=true;});
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>{redrawDecals();applyLang();});
+  if(document.fonts.load)document.fonts.load('700 40px "Amiri"',SHAHADA).then(redrawDecals,()=>{});}
 requestAnimationFrame(frame);
