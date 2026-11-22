@@ -7,9 +7,9 @@ const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const D2R=Math.PI/180;
 const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;};
-/* the test copy keeps its own saved data (b01beta.*), apart from the main simulator on the same site.
-   Set BETA to false when this version becomes the main one. */
-const BETA=true,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
+/* BETA=true turns a copy into a test version: it keeps its own saved data (b01beta.*), apart from the main
+   simulator on the same site, and tags its sessions «تجريبي». The main version runs with false. */
+const BETA=false,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
 const store={get(k,d){try{const v=localStorage.getItem(KEY(k));return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(KEY(k),JSON.stringify(v));}catch(e){}}};
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
