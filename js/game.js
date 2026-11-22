@@ -175,7 +175,7 @@ scene.add(sky);
 const OCEAN=640,OSEG=128,OCELL=OCEAN/OSEG;
 const oceanGeo=new THREE.PlaneGeometry(OCEAN,OCEAN,OSEG,OSEG);oceanGeo.rotateX(-Math.PI/2);
 const oceanBase=Float32Array.from(oceanGeo.attributes.position.array);
-const ocean=new THREE.Mesh(oceanGeo,new THREE.MeshStandardMaterial({color:0x3a7d93,roughness:.32,metalness:.08,flatShading:true,transparent:true,opacity:.8}));
+const ocean=new THREE.Mesh(oceanGeo,new THREE.MeshStandardMaterial({color:0x3a7d93,roughness:.32,metalness:.08,flatShading:true,transparent:true,opacity:.8,side:THREE.DoubleSide}));/* both sides: the surface is seen from below too */
 scene.add(ocean);
 function waveH(x,z,tt){return .32*Math.sin(x*.045+tt*.9)+.22*Math.sin(z*.061-tt*1.1)+.16*Math.sin((x+z)*.09+tt*1.6)+.07*Math.sin(x*.21-z*.17+tt*2.3);}
 let oceanSkip=false,oceanFrame=0;
@@ -387,6 +387,57 @@ function setTg3D(tg){
   o.mats.forEach(m=>{m.emissive.setHex(col);m.emissiveIntensity=shown?.55:0;});
 }
 
+/* ---------------- underwater view and effects ---------------- */
+const UWC=0x0d3440,FX={uw:false,time:{value:0},cstr:{value:.18}},rfx=mulberry(91);/* caustics: faint seen from above, full strength underwater */
+/* moving light patterns (caustics) on the seabed, seen through the water from above and from below */
+seabed.material.onBeforeCompile=sh=>{
+  sh.uniforms.uTime=FX.time;sh.uniforms.uCs=FX.cstr;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uTime;uniform float uCs;varying vec3 vWp;\n'+
+    'float cau(vec2 p,float t){float v=sin(p.x*1.3+t*1.1+sin(p.y*.9+t*.7)*1.6)+sin(p.y*1.5-t*.9+sin(p.x*1.1-t*.6)*1.4)+sin((p.x+p.y)*.9+t*.8+sin((p.x-p.y)*.7+t)*1.2);return pow(1.-abs(v/3.),7.);}')
+    .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=uCs*vec3(.16,.38,.38)*(cau(vWp.xz*.42,uTime)+.6*cau(vWp.xz*.9+3.1,uTime*1.3));');
+};
+/* particles drifting in the water around the camera */
+const SNOW_N=700,snowPos=new Float32Array(SNOW_N*3);for(let i=0;i<SNOW_N*3;i++)snowPos[i]=(rfx()-.5)*40;
+const snow=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(snowPos,3)),new THREE.PointsMaterial({color:0xd6eef0,size:.07,transparent:true,opacity:.6,depthWrite:false}));
+snow.frustumCulled=false;snow.visible=false;scene.add(snow);
+/* sun shafts coming down from the surface */
+const shaftTex=(()=>{const c=document.createElement('canvas');c.width=64;c.height=256;const x=c.getContext('2d'),g1=x.createLinearGradient(0,0,0,256);
+  g1.addColorStop(0,'rgba(255,255,255,.95)');g1.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g1;x.fillRect(0,0,64,256);
+  x.globalCompositeOperation='destination-in';const g2=x.createLinearGradient(0,0,64,0);g2.addColorStop(0,'rgba(0,0,0,0)');g2.addColorStop(.5,'rgba(0,0,0,1)');g2.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g2;x.fillRect(0,0,64,256);const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;return tx;})();
+const shafts=new THREE.Group();shafts.visible=false;scene.add(shafts);
+for(let i=0;i<9;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(2.2+rfx()*2.5,20),new THREE.MeshBasicMaterial({map:shaftTex,color:0x9fe0e0,transparent:true,opacity:.1,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,fog:false}));
+  m.userData={ox:(rfx()-.5)*36,oz:(rfx()-.5)*36,ph:rfx()*6.28,tilt:(rfx()-.5)*.35};shafts.add(m);}
+/* the wake: foam behind the stern; the propeller wash fades fast, the two outer arms spread and last longer */
+const WAKE_N=90,wakePts=[],wkGeo=new THREE.BufferGeometry();
+wkGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(WAKE_N*4*3),3));wkGeo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(WAKE_N*4*4),4));
+(()=>{const ix=[];for(let i=0;i<WAKE_N-1;i++)for(let j=0;j<3;j++){const a=i*4+j,b=a+1,c=a+4,d=c+1;ix.push(a,c,b,b,c,d);}wkGeo.setIndex(ix);})();
+const wake=new THREE.Mesh(wkGeo,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,depthWrite:false,side:THREE.DoubleSide}));wake.frustumCulled=false;scene.add(wake);
+function updateWake(tt,b,bp){
+  const fx=Math.sin(b.h),fz=-Math.cos(b.h),sx=bp.x-fx*4.2,sz=bp.z-fz*4.2,P=wakePts;
+  if(!P.length||Math.hypot(P[0].x-sx,P[0].z-sz)>.7){P.unshift({x:sx,z:sz,t:tt,v:b.v});if(P.length>WAKE_N)P.pop();}
+  const pos=wkGeo.attributes.position.array,col=wkGeo.attributes.color.array,n=P.length;
+  for(let i=0;i<n;i++){
+    const p=P[i],q=P[Math.min(n-1,i+1)],r=P[Math.max(0,i-1)];let dx=r.x-q.x,dz=r.z-q.z;const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+    const age=tt-p.t,w=.9+age*1.6,vf=clamp(p.v/MAXV,0,1)*(i?1:0),ae=vf*.45*clamp(1-age/9,0,1),ac=vf*.55*clamp(1-age/3.5,0,1),y=waveH(p.x,p.z,tt)+.07;
+    [-1,-.3,.3,1].forEach((s,j)=>{const o=(i*4+j);pos[o*3]=p.x-dz*w*s;pos[o*3+1]=y;pos[o*3+2]=p.z+dx*w*s;col[o*4]=col[o*4+1]=col[o*4+2]=1;col[o*4+3]=(j===0||j===3)?ae:ac;});
+  }
+  wkGeo.setDrawRange(0,Math.max(0,(n-1)*18));wkGeo.attributes.position.needsUpdate=true;wkGeo.attributes.color.needsUpdate=true;
+}
+function updateFx(dt,tt,b,bp){
+  FX.time.value=tt;
+  const cp=camera.position,uw=cp.y<waveH(cp.x,cp.z,tt)-.05;
+  if(uw!==FX.uw){FX.uw=uw;scene.fog.color.set(uw?UWC:HAZE);scene.fog.near=uw?1:140;scene.fog.far=uw?46:620;scene.background.set(uw?UWC:HAZE);sky.visible=!uw;snow.visible=uw;shafts.visible=uw;FX.cstr.value=uw?1:.18;}
+  if(uw){
+    const a=snowPos,cx=cp.x,cy=cp.y,cz=cp.z,wr=(v,c)=>c+((((v-c+20)%40)+40)%40)-20;
+    for(let i=0;i<SNOW_N;i++){const k=i*3;a[k]=wr(a[k]+Math.sin(tt*.3+i)*.004,cx);a[k+1]=wr(a[k+1]-.15*dt,cy);a[k+2]=wr(a[k+2],cz);if(a[k+1]>-.4)a[k+1]-=40;if(a[k+1]<-DEPTH)a[k+1]+=DEPTH-1;}
+    snow.geometry.attributes.position.needsUpdate=true;
+    shafts.children.forEach(m=>{const u=m.userData,wx=cx+u.ox,wz=cz+u.oz;m.position.set(wx,-10,wz);m.rotation.set(0,Math.atan2(cx-wx,cz-wz),u.tilt);m.material.opacity=.12+.07*Math.sin(tt*.7+u.ph);});
+  }
+  updateWake(tt,b,bp);
+}
+
 /* ---------------- input ---------------- */
 function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){openLogin();return true;}return false;}
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down'};
@@ -415,7 +466,7 @@ document.querySelectorAll('.tbtn').forEach(b=>{const k=b.dataset.k;
   const off=()=>{b.classList.remove('on');press(k,0);};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);});
 function toggleAuto(){S.auto=!S.auto;$('#b-auto').setAttribute('aria-pressed',String(S.auto));toast(S.auto?t('autoOn'):t('takeover'));if(S.auto){S.thr=MAXV;S.legFrom=[S.boat.x,S.boat.y];S.routeDone=false;}}
-function toggleCam(){S.cam=S.cam==='chase'?'side':S.cam==='side'?'top':'chase';}
+function toggleCam(){S.cam={chase:'side',side:'under',under:'top',top:'chase'}[S.cam]||'chase';}
 $('#b-auto').addEventListener('click',()=>{S.lastInput=performance.now();if(S.mode==='play')toggleAuto();});
 $('#b-cam').addEventListener('click',()=>{S.lastInput=performance.now();toggleCam();});
 $('#b-lang').addEventListener('click',()=>{lang=lang==='ar'?'en':'ar';store.set('b01sim.lang',lang);applyLang();});
@@ -806,7 +857,11 @@ const camPos=new THREE.Vector3(-170,14,40),camLook=new THREE.Vector3();
 function updateCamera(dt,tt){
   const b=S.boat,bp=W(b.x,b.y,0),fwd=new THREE.Vector3(Math.sin(b.h),0,-Math.cos(b.h)),right=new THREE.Vector3(Math.cos(b.h),0,Math.sin(b.h));
   let want,look;
-  if(S.mode==='attract'||S.mode==='brief'||S.mode==='login'){const a=tt*.07;want=bp.clone().add(new THREE.Vector3(Math.cos(a)*13,3.4+1.2*Math.sin(tt*.13),Math.sin(a)*13));look=bp.clone().add(new THREE.Vector3(0,.7,0));}
+  /* the demo orbits above the vessel, and for 16 s of every minute glides underwater beside it */
+  if((S.mode==='attract'||S.mode==='brief'||S.mode==='login')&&tt%60>44){const u=(tt%60-44)/16;
+    want=bp.clone().addScaledVector(right,11).addScaledVector(fwd,-7+14*u).add(new THREE.Vector3(0,-3.6,0));look=bp.clone().addScaledVector(fwd,.5).add(new THREE.Vector3(0,-3.4,0));}
+  else if(S.mode==='attract'||S.mode==='brief'||S.mode==='login'){const a=tt*.07;want=bp.clone().add(new THREE.Vector3(Math.cos(a)*13,3.4+1.2*Math.sin(tt*.13),Math.sin(a)*13));look=bp.clone().add(new THREE.Vector3(0,.7,0));}
+  else if(S.cam==='under'){want=bp.clone().addScaledVector(right,11).addScaledVector(fwd,-4).add(new THREE.Vector3(0,-3.4,0));look=bp.clone().addScaledVector(fwd,1).add(new THREE.Vector3(0,-3.2,0));}
   else if(S.cam==='top'){want=bp.clone().add(new THREE.Vector3(0,120,40));look=bp.clone();}
   else if(S.cam==='side'){want=bp.clone().addScaledVector(right,9.5*(S.camSide||1)).addScaledVector(fwd,1.2).add(new THREE.Vector3(0,2.1,0));look=bp.clone().addScaledVector(fwd,.4).add(new THREE.Vector3(0,.8,0));}
   else{want=bp.clone().addScaledVector(fwd,-15).addScaledVector(right,5.5).add(new THREE.Vector3(0,5.8,0));look=bp.clone().addScaledVector(fwd,5).add(new THREE.Vector3(0,1.2,0));}
@@ -963,7 +1018,7 @@ function frame(now){
   const ud=b01.userData;ud.turret.rotation.y=Math.sin(tt*.32)*1.05;ud.whipPivot.rotation.x=-PH.vr*.05+Math.sin(tt*2.3)*.025;ud.whipPivot.rotation.z=-PH.vp*.05-b.v*.012;
   ud.props.forEach((p,i)=>{p.rotation.x+=(i?1:-1)*dt*(3+b.v*14);});
   sun.position.set(bp.x-16,22,bp.z+9);sun.target.position.copy(bp);
-  updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);
+  updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);updateFx(dt,tt,b,bp);
   for(const tg of S.tg){const o=T3[tg.kind],[px,py]=tpos(tg,S.time);o.g.position.copy(W(px,py,o.y));o.ring.position.copy(W(px,py,1.1));if(o.ring.visible)o.ring.rotation.z=tt*.6;
     if(tg.kind==='mine'){o.g.position.y=o.y+Math.sin(tt*.8)*.15;const g0=W(tg.x,tg.y,0);updateRope(o,g0.x,g0.z,o.g.position,dt,tt);}
     if(o.fish)o.fish.forEach(f=>{const a=f.a+tt*f.s;f.p.position.set(Math.cos(a)*f.rad,f.h+Math.sin(tt*.9+f.a)*.15,Math.sin(a)*f.rad);v3.set(-Math.sin(a),0,Math.cos(a));f.p.rotation.y=Math.atan2(-v3.z,v3.x);});}
@@ -971,12 +1026,13 @@ function frame(now){
   updateHud(false);
   if(now-mmT>140){mmT=now;drawMinimap();}
   if(now-wcdT>250){wcdT=now;drawWCD();}
-  if(!fpsChecked){fpsAcc+=dt;fpsN++;if(now-startT>4000){const fps=fpsN/fpsAcc;fpsChecked=true;if(fps<45&&pixelRatio>1){pixelRatio=1;renderer.setPixelRatio(1);}if(fps<32)oceanSkip=true;}}
+  if(!fpsChecked){fpsAcc+=dt;fpsN++;if(now-startT>4000){const fps=fpsN/fpsAcc;fpsChecked=true;if(fps<45&&pixelRatio>1){pixelRatio=1;renderer.setPixelRatio(1);}if(fps<38)sun.castShadow=false;if(fps<32)oceanSkip=true;}}
   requestAnimationFrame(frame);
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,
+  get wake(){const c=wkGeo.attributes.color.array;return {n:wakePts.length,count:wkGeo.drawRange.count,alpha:[3,7,11,15,35,39,43,47,203,207].map(i=>+c[i].toFixed(2))};},
   phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
   advance(sec,dt){dt=dt||1/30;const n=Math.round(sec/dt);for(let i=0;i<n;i++){if(!S.paused&&(S.mode==='attract'||S.mode==='play'))step(dt);}
