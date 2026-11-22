@@ -9,12 +9,14 @@ const D2R=Math.PI/180;
 const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;};
 const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+/* sound hook: js/audio.js sets AUDIO once the page has been touched; until then every call is silent */
+let AUDIO=null;const sfx=(n,o)=>{if(AUDIO)AUDIO.play(n,o);};
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 
 /* ---------------- language ---------------- */
 const T={
 ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزمن ×{x}',time:'الوقت',left:'المتبقي',cov:'التغطية',tgs:'الأهداف',speed:'السرعة',batt:'البطارية',score:'النقاط',auto:'طيار آلي',cam:'الكاميرا',map:'منطقة المسح',sonar:'عمود الماء، ملتي بيم',dead:'منطقة ميتة',
- press:'اضغط أي زر أو المس الشاشة لتتولى القيادة',keys:'الأسهم للقيادة، المسافة للطيار الآلي، C للكاميرا',
+ press:'اضغط أي زر أو المس الشاشة لتتولى القيادة',keys:'الأسهم للقيادة، المسافة للطيار الآلي، C للكاميرا، واسحب بالماوس للتدوير',
  a1:'B01 مركبة سطحية منخفضة البصمة تمسح مدخل الميناء بحثًا عن الألغام.',
  a2:'المسح الشبكي: تمريرة أفقية كاملة، ثم تمريرة عمودية فوق المنطقة نفسها.',
  a3:'الخطوط كل 25 م حتى لا تبقى فجوة في المنطقة الميتة، والانعطاف خارج المنطقة.',
@@ -50,9 +52,15 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  visitor:'الآيدي',rate:'قيّم تجربتك',side:'قيّم وأنهِ الجلسة',
  fb_title:'قيّم تجربتك مع B01',star_n:'{n} من 5',s1:'ضعيفة',s2:'مقبولة',s3:'جيدة',s4:'ممتازة',s5:'رائعة',
  fb_note:'ملاحظتك (اختياري)',fb_send:'أرسل التقييم',fb_skip:'تخطي',fb_back:'رجوع للمهمة',fb_need:'اختر عدد النجوم أولًا',
- th_title:'شكرًا لك',th_body:'انحفظ تقييمك لفريق B01. اللعبة ترجع لوضع العرض للزائر اللي بعدك.',th_done:'تم'},
+ th_title:'شكرًا لك',th_body:'انحفظ تقييمك لفريق B01. اللعبة ترجع لوضع العرض للزائر اللي بعدك.',th_done:'تم',
+ goto:'B01 متجهة للنقطة',arrived:'وصلت. اضغط «طيار آلي» لتكمل المسح.',
+ tour1:'هذي B01. قُدها بالأسهم، أو خلّ «طيار آلي» يمسح المنطقة لحاله.',tour2:'هذي خريطة المسح. اضغط على أي نقطة فيها فتروح لها B01، واضغط على هدف مرصود لتشوف ملفه.',
+ tour3:'هنا يشوف السونار عمود الماء تحت المركبة. الهدف يبان كنقطة مضيئة.',tour4:'لما يُرصد هدف تفتح حزمة الأدلة، وأنت تقرر. اسحب بالماوس لتدير الكاميرا، والعجلة للتقريب.',
+ t_next:'التالي',t_done:'ابدأ',t_skip:'تخطي',t_of:'{i} من 4',
+ hl_above:'فوق القاع',hl_depth:'تحت السطح',hl_bed:'على القاع',hl_bg_new:'مسح الأساس: ما كان هنا',hl_bg_old:'مسح الأساس: كان موجودًا',hl_shadow:'ظل صوتي',hl_noshadow:'الظل لم يُرَ',
+ hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2',mute:'كتم الصوت',unmute:'تشغيل الصوت'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
- press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera',
+ press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera, drag to turn the view',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
  a2:'Grid survey: a full horizontal pass, then a full perpendicular pass over the same area.',
  a3:'Lines every 25 m leave no gap in the dead zone, and turns happen outside the area.',
@@ -88,7 +96,13 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  visitor:'ID',rate:'Rate your experience',side:'Rate and finish',
  fb_title:'Rate your experience with B01',star_n:'{n} of 5',s1:'Poor',s2:'Fair',s3:'Good',s4:'Very good',s5:'Excellent',
  fb_note:'Your comment (optional)',fb_send:'Send rating',fb_skip:'Skip',fb_back:'Back to the mission',fb_need:'Pick the stars first',
- th_title:'Thank you',th_body:'Your rating is saved for the B01 team. The game now returns to the demo for the next visitor.',th_done:'Done'}};
+ th_title:'Thank you',th_body:'Your rating is saved for the B01 team. The game now returns to the demo for the next visitor.',th_done:'Done',
+ goto:'B01 heading to the point',arrived:'Arrived. Press Autopilot to continue the survey.',
+ tour1:'This is B01. Drive with the arrows, or let Autopilot survey the area.',tour2:'This is the survey map. Click any point to send B01 there, or a detected target to open its file.',
+ tour3:'Here the sonar sees the water column under the vessel. A target shows as a bright spot.',tour4:'When a target is detected, the evidence package opens and you decide. Drag to turn the camera; scroll to zoom.',
+ t_next:'Next',t_done:'Start',t_skip:'Skip',t_of:'{i} of 4',
+ hl_above:'above the seabed',hl_depth:'below the surface',hl_bed:'on the seabed',hl_bg_new:'baseline: nothing here',hl_bg_old:'baseline: already there',hl_shadow:'acoustic shadow',hl_noshadow:'shadow not seen',
+ hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2',mute:'Mute',unmute:'Sound on'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
@@ -99,7 +113,7 @@ function applyLang(){
   document.querySelectorAll('[data-tl]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.tl));});
   $('#b-lang').textContent=lang==='ar'?'English':'العربية';
   $('#br-ctrl').textContent=TOUCH?t('b_touch'):t('b_keys');
-  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();
+  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();
   if(S.mode==='attract')$('#cap-text').textContent=t('a'+(S.capIdx+1));
   if(S.cur&&!$('#o-hand').hidden)renderHand();
   if(S.mode==='results')renderResults();
@@ -140,7 +154,7 @@ function resetScenario(mode){
   S.mode=mode;S.paused=false;S.time=0;S.real=0;S.score=0;S.batt=86;S.cov.fill(0);S.covPct=S.covA=S.covB=0;
   if(mode==='play'&&!timeSel.free){S.limit=timeSel.min*60;S.k=Math.max(1,ROUTE_S/(.88*S.limit));}else{S.limit=0;S.k=1;}
   Object.assign(S.boat,{x:AREA.x0-RUN-30,y:A_Y(0),h:90*D2R,v:mode==='attract'?MAXV:0,r:0});
-  S.auto=mode==='attract';S.wp=0;S.queue=[];S.legFrom=null;S.routeDone=false;S.thr=mode==='attract'?MAXV:0;S.trail=[];
+  S.auto=mode==='attract';S.wp=0;S.queue=[];S.legFrom=null;S.goal=null;S.routeDone=false;S.thr=mode==='attract'?MAXV:0;S.trail=[];
   S.tg=newTargets();S.cur=null;S.pend=[];S.nextId=0;S.result=null;
   S.capIdx=0;S.capT=0;S.lastInput=performance.now();
   S.tg.forEach(setTg3D);crossGuide.visible=false;setSimLabel();
@@ -388,7 +402,7 @@ function setTg3D(tg){
 }
 
 /* ---------------- underwater view and effects ---------------- */
-const UWC=0x0d3440,FX={uw:false,time:{value:0},cstr:{value:.18}},rfx=mulberry(91);/* caustics: faint seen from above, full strength underwater */
+const UWC=0x0d3440,FX={uw:false,time:{value:0},cstr:{value:.18},slowT:0,flashT:0,bigPing:false},rfx=mulberry(91),CORAL=new THREE.Color(0xff6b45);/* caustics: faint seen from above, full strength underwater */
 /* moving light patterns (caustics) on the seabed, seen through the water from above and from below */
 seabed.material.onBeforeCompile=sh=>{
   sh.uniforms.uTime=FX.time;sh.uniforms.uCs=FX.cstr;
@@ -425,6 +439,17 @@ function updateWake(tt,b,bp){
   }
   wkGeo.setDrawRange(0,Math.max(0,(n-1)*18));wkGeo.attributes.position.needsUpdate=true;wkGeo.attributes.color.needsUpdate=true;
 }
+/* sonar pulses: a ring spreading on the water under B01 every 4 s, a big coral one on a detection */
+const pings=[0,1,2].map(()=>{const m=new THREE.Mesh(new THREE.RingGeometry(.92,1,64).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x8fd6cf,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
+  m.visible=false;m.frustumCulled=false;scene.add(m);return {m,t:9,big:false};});
+let pingT=0;
+function updatePings(dt,tt,bp){
+  pingT+=dt;
+  if(FX.bigPing||pingT>4){const p=pings.reduce((a,c)=>c.t>a.t?c:a);p.t=0;p.big=FX.bigPing;p.m.position.set(bp.x,.2,bp.z);p.m.material.color.setHex(p.big?0xff6b45:0x8fd6cf);p.m.visible=true;
+    if(!p.big&&(S.mode==='play'||S.mode==='attract')&&!S.paused)sfx('ping',{soft:true});FX.bigPing=false;pingT=0;}
+  for(const p of pings){if(!p.m.visible)continue;p.t+=dt;const u=p.t/2.6;if(u>=1){p.m.visible=false;continue;}
+    const r=1+u*(p.big?40:26);p.m.scale.set(r,1,r);p.m.position.y=waveH(p.m.position.x,p.m.position.z,tt)+.12;p.m.material.opacity=(p.big?.8:.38)*(1-u);}
+}
 function updateFx(dt,tt,b,bp){
   FX.time.value=tt;
   const cp=camera.position,uw=cp.y<waveH(cp.x,cp.z,tt)-.05;
@@ -446,6 +471,7 @@ addEventListener('keydown',e=>{
   /* the hidden admin panel: Ctrl+Shift+D from any screen, then the passcode */
   if(e.ctrlKey&&e.shiftKey&&e.code==='KeyD'){e.preventDefault();e.stopPropagation();openAdminGate();return;}
   if(adminOpen()){if(e.key==='Escape')closeAdmin();else if(e.key==='Enter'&&e.target&&e.target.id&&e.target.id.startsWith('pin-')){e.preventDefault();pinGo();}return;}
+  if(tourI>=0){S.lastInput=performance.now();if(e.key==='Escape'){e.preventDefault();closeTour();}return;}
   /* typing in the entry or feedback fields is never a game control */
   if(e.target&&e.target.matches&&e.target.matches('input,textarea')){S.lastInput=performance.now();if(e.target.id==='v-id'&&e.key==='Enter'){e.preventDefault();doLogin();}return;}
   if(S.mode==='feedback'){S.lastInput=performance.now();const n=+e.key;if(n>=1&&n<=5)setStars(n);return;}
@@ -459,13 +485,13 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k)press(k,0);});
 addEventListener('pointerdown',e=>{if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
-function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
+function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;if(S.goal){S.goal=null;S.queue=[];}$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
 function releaseKeys(){S.keys={left:0,right:0,up:0,down:0};document.querySelectorAll('.tbtn.on').forEach(b=>b.classList.remove('on'));}
 document.querySelectorAll('.tbtn').forEach(b=>{const k=b.dataset.k;
   const on=e=>{e.preventDefault();S.lastInput=performance.now();if(S.mode!=='play'||S.paused)return;b.classList.add('on');press(k,1);};
   const off=()=>{b.classList.remove('on');press(k,0);};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);});
-function toggleAuto(){S.auto=!S.auto;$('#b-auto').setAttribute('aria-pressed',String(S.auto));toast(S.auto?t('autoOn'):t('takeover'));if(S.auto){S.thr=MAXV;S.legFrom=[S.boat.x,S.boat.y];S.routeDone=false;}}
+function toggleAuto(){S.auto=!S.auto;$('#b-auto').setAttribute('aria-pressed',String(S.auto));toast(S.auto?t('autoOn'):t('takeover'));if(S.auto){S.thr=MAXV;S.legFrom=[S.boat.x,S.boat.y];S.routeDone=false;if(S.goal){S.goal=null;S.queue=[];}}}
 function toggleCam(){S.cam={chase:'side',side:'under',under:'top',top:'chase'}[S.cam]||'chase';}
 $('#b-auto').addEventListener('click',()=>{S.lastInput=performance.now();if(S.mode==='play')toggleAuto();});
 $('#b-cam').addEventListener('click',()=>{S.lastInput=performance.now();toggleCam();});
@@ -492,18 +518,36 @@ function doLogin(){
 }
 $('#b-login').addEventListener('click',doLogin);
 function openBrief(){S.mode='brief';$('#caption').hidden=true;$('#o-login').hidden=true;renderTimeSel();$('#o-brief').hidden=false;$('#b-start').focus();showControls();}
-function startPlay(){$('#o-brief').hidden=true;resetScenario('play');S.cam='chase';showControls();updateHud(true);}
-function showControls(){const play=S.mode==='play';$('#t-steer').hidden=!(play&&TOUCH);$('#t-thr').hidden=!(play&&TOUCH);$('#hint').hidden=!(play&&!TOUCH);$('#b-side').hidden=!(play&&!!sess);}
+function startPlay(){$('#o-brief').hidden=true;resetScenario('play');S.cam='chase';Object.assign(CAMU,{on:false,yaw:0,pitch:0,zoom:1,drag:null});showControls();updateHud(true);
+  if(!tourDone){tourDone=true;openTour();}}
+function showControls(){const play=S.mode==='play';document.body.classList.toggle('playing',play);$('#t-steer').hidden=!(play&&TOUCH);$('#t-thr').hidden=!(play&&TOUCH);$('#hint').hidden=!(play&&!TOUCH);$('#b-side').hidden=!(play&&!!sess);}
 function toAttract(){
   /* a visitor who walks away still leaves a session; stars picked but not sent are kept */
   if(sess){if(S.mode==='feedback'&&FB.stars)Object.assign(sess,{stars:FB.stars,review:$('#fb-text').value.trim().slice(0,600)});closeSession(S.mode==='feedback'&&FB.stars?'partial':'left');}
-  clearTimeout(thanksTimer);['#o-login','#o-brief','#o-hand','#o-res','#o-fb','#o-thanks'].forEach(s=>$(s).hidden=true);
+  clearTimeout(thanksTimer);tourI=-1;['#o-login','#o-brief','#o-hand','#o-res','#o-fb','#o-thanks','#tour'].forEach(s=>$(s).hidden=true);
   resetScenario('attract');S.visitor='';$('#caption').hidden=false;$('#cap-text').textContent=t('a1');showControls();
 }
 $('#b-start').addEventListener('click',startPlay);
 $('#b-again').addEventListener('click',()=>{$('#o-res').hidden=true;openBrief();});
 $('#b-rate').addEventListener('click',()=>openFeedback('results'));
 $('#b-side').addEventListener('click',()=>{if(S.mode==='play'&&!S.paused)openFeedback('play');});
+
+/* first-time tour: four short steps for each new visitor, the mission waits until it ends */
+const TOUR=[['#b-auto','tour1'],['#mm','tour2'],['#wcd','tour3'],[null,'tour4']];let tourI=-1,tourDone=false;
+function openTour(){tourI=0;S.paused=true;$('#tour').hidden=false;renderTour();}
+function renderTour(){
+  if(tourI<0)return;const [sel,k]=TOUR[tourI],ring=$('#tour-ring'),card=$('#tour-card');
+  $('#tour-text').textContent=t(k);$('#tour-step').textContent=t('t_of').replace('{i}',tourI+1);$('#tour-next').textContent=t(tourI===TOUR.length-1?'t_done':'t_next');$('#tour-skip').textContent=t('t_skip');
+  const cw=Math.min(380,innerWidth-32);card.style.width=cw+'px';$('#tour').classList.toggle('dim',!sel);
+  if(sel){const r=$(sel).getBoundingClientRect(),p=8;Object.assign(ring.style,{display:'block',left:(r.left-p)+'px',top:(r.top-p)+'px',width:(r.width+2*p)+'px',height:(r.height+2*p)+'px'});
+    const below=r.bottom+18+190<innerHeight;Object.assign(card.style,{left:clamp(r.left+r.width/2-cw/2,16,innerWidth-cw-16)+'px',top:(below?r.bottom+18:Math.max(16,r.top-208))+'px'});}
+  else{ring.style.display='none';Object.assign(card.style,{left:(innerWidth-cw)/2+'px',top:Math.round(innerHeight*.36)+'px'});}
+  $('#tour-next').focus({preventScroll:true});
+}
+function closeTour(){if(tourI<0)return;tourI=-1;$('#tour').hidden=true;S.paused=false;S.lastInput=performance.now();}
+$('#tour-next').addEventListener('click',()=>{sfx('click');S.lastInput=performance.now();if(tourI<TOUR.length-1){tourI++;renderTour();}else closeTour();});
+$('#tour-skip').addEventListener('click',closeTour);
+addEventListener('resize',()=>renderTour());
 
 /* ---------------- exhibition log: one session per visitor, kept on this device first, then sent to Google Sheets ---------------- */
 const SESS='b01sim.sessions',SHEET='b01sim.sheet',PINK='b01sim.pin';
@@ -513,6 +557,7 @@ const sessions=()=>store.get(SESS,[]);
 function putSession(r){const a=sessions(),i=a.findIndex(x=>x.id===r.id);if(i>=0)a[i]=r;else a.push(r);store.set(SESS,a);}
 function openSession(visitor,role){
   if(sess)closeSession('left');/* never leave a previous session hanging open */
+  tourDone=false;/* each new visitor gets the tour once */
   const now=new Date();
   sess={id:now.getTime().toString(36)+Math.random().toString(36).slice(2,6),visitor,role,stars:0,review:'',start:stamp(now),end:'',duration_s:0,
     missions:0,score:'',coverage:'',correct:'',mine:'',wreck:'',unknown:'',fish:'',time_mode:'',device:TOUCH?'tablet':'pc',lang,status:'open',t0:now.getTime(),t1:now.getTime(),synced:false};
@@ -745,7 +790,7 @@ function renderHand(){
   $('#o-hand .card').dataset.lv=e.lv;
   const lvl=$('#h-lvl');lvl.textContent=t('lv_'+e.lv);lvl.className='lvl lv-'+e.lv;
   $('#h-id').textContent=tg.id;$('#h-t').textContent=t('h_'+tg.kind);$('#h-conf').textContent=e.conf+'%';
-  $('#h-ev').innerHTML=e.rows.map(([k,ok,d])=>'<li class="'+(ok?'':'no')+'"><span class="mark" aria-hidden="true"></span><span><b>'+t(k)+'</b><span class="d">'+t(d)+'</span></span></li>').join('');
+  $('#h-ev').innerHTML=e.rows.map(([k,ok,d])=>'<li class="'+(ok?'':'no')+(S.evHi===k?' on':'')+'" data-k="'+k+'" tabindex="0" role="button" aria-pressed="'+(S.evHi===k)+'"><span class="mark" aria-hidden="true"></span><span><b>'+t(k)+'</b><span class="d">'+t(d)+'</span></span></li>').join('');
   const fb=$('#h-fb');fb.hidden=!tg.fb;fb.textContent=tg.fb?t(tg.fb):'';
   const closed=tg.state==='hand'||tg.state==='clear';
   $('#h-act').hidden=closed||!!tg.fb;$('#h-cont').hidden=!(closed||tg.fb);
@@ -753,10 +798,16 @@ function renderHand(){
   requestAnimationFrame(drawSnip);
 }
 /* a detection pauses the mission; packages open one at a time */
-function queueHand(tg,msg){S.paused=true;releaseKeys();toast(t(msg),'hit');if(!S.pend.includes(tg))S.pend.push(tg);if(!S.cur)setTimeout(nextHand,450);}
+/* the detection moment: a second of slow motion, the sonar fan flashes coral, the screen edge pulses, two pings, then the package */
+function queueHand(tg,msg){
+  releaseKeys();toast(t(msg),'hit');if(!S.pend.includes(tg))S.pend.push(tg);
+  FX.slowT=1;FX.flashT=1.3;FX.bigPing=true;const bd=document.body;bd.classList.remove('det');void bd.offsetWidth;bd.classList.add('det');setTimeout(()=>bd.classList.remove('det'),1400);
+  sfx('ping');setTimeout(()=>sfx('ping'),260);sfx('alert');
+  if(!S.cur)setTimeout(()=>{if(S.mode==='play'){S.paused=true;nextHand();}},1000);
+}
 function nextHand(){
   if(S.cur||S.mode!=='play')return;const tg=S.pend.shift();if(!tg){S.paused=false;return;}
-  S.cur=tg;tg.fb='';S.lastInput=performance.now();releaseKeys();renderHand();
+  S.cur=tg;tg.fb='';S.lastInput=performance.now();releaseKeys();S.evHi=S.evPin=null;renderHand();
   $('#o-hand').hidden=false;$('#o-hand .card').scrollTop=0;$('#d-hand').focus({preventScroll:true});
 }
 const SCORE={mine:{clear:-300},wreck:{hand:150,clear:-120},unknown:{hand:200,clear:-200},fish:{hand:-60,clear:150}};
@@ -777,7 +828,7 @@ function planCross(tg){
   const ux=(E2[0]-E1[0])/(2*D),uy=(E2[1]-E1[1])/(2*D),side=((bt.x-E1[0])*uy-(bt.y-E1[1])*ux)>=0?1:-1;
   const wide=[E1[0]+uy*side*36,E1[1]-ux*side*36];
   const resume=[bt.x-Math.sin(bt.h)*45,bt.y-Math.cos(bt.h)*45];/* rejoin far enough back to be straight again where the line was left */
-  S.queue=[wide,E1,E2,resume];S.legFrom=[bt.x,bt.y];S.routeDone=false;
+  S.queue=[wide,E1,E2,resume];S.legFrom=[bt.x,bt.y];S.routeDone=false;S.goal=null;
 }
 $('#d-hand').addEventListener('click',()=>decide('hand'));
 $('#d-cross').addEventListener('click',()=>decide('cross'));
@@ -818,7 +869,10 @@ function renderResults(){
 function steerAuto(){
   const b=S.boat;let P=S.queue.length?S.queue[0]:S.route[S.wp];
   if(!P){return null;}
-  if(Math.hypot(P[0]-b.x,P[1]-b.y)<9){S.legFrom=P;if(S.queue.length)S.queue.shift();else S.wp++;P=S.queue.length?S.queue[0]:S.route[S.wp];if(!P)return null;}
+  if(Math.hypot(P[0]-b.x,P[1]-b.y)<(S.goal&&S.queue.length===1?5:9)){S.legFrom=P;if(S.queue.length)S.queue.shift();else S.wp++;
+    /* a point picked on the map: stop there and wait for the visitor */
+    if(S.goal&&!S.queue.length){S.goal=null;S.auto=false;S.thr=0;$('#b-auto').setAttribute('aria-pressed','false');toast(t('arrived'));return {rud:0,v:0};}
+    P=S.queue.length?S.queue[0]:S.route[S.wp];if(!P)return null;}
   /* line-following: steer to a look-ahead point on the current leg, so the boat rejoins the line after each turn */
   const A=S.legFrom||[b.x,b.y];let ux=P[0]-A[0],uy=P[1]-A[1];const L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
   const s=clamp((b.x-A[0])*ux+(b.y-A[1])*uy+16,0,L),tx=A[0]+ux*s,ty=A[1]+uy*s;
@@ -875,9 +929,23 @@ function updateCamera(dt,tt){
   else if(S.cam==='top'){want=bp.clone().add(new THREE.Vector3(0,120,40));look=bp.clone();}
   else if(S.cam==='side'){want=bp.clone().addScaledVector(right,9.5*(S.camSide||1)).addScaledVector(fwd,1.2).add(new THREE.Vector3(0,2.1,0));look=bp.clone().addScaledVector(fwd,.4).add(new THREE.Vector3(0,.8,0));}
   else{want=bp.clone().addScaledVector(fwd,-15).addScaledVector(right,5.5).add(new THREE.Vector3(0,5.8,0));look=bp.clone().addScaledVector(fwd,5).add(new THREE.Vector3(0,1.2,0));}
-  const k=clamp(dt*2.4,0,1);camPos.lerp(want,k);camLook.lerp(look,k);
+  /* the visitor's own camera: drag turns it around B01, the wheel zooms; 8 s after the last touch it eases back */
+  if(S.mode==='play'&&CAMU.on){
+    if(!CAMU.drag&&performance.now()-CAMU.last>8000){const f=clamp(dt*1.6,0,1);CAMU.yaw-=CAMU.yaw*f;CAMU.pitch-=CAMU.pitch*f;CAMU.zoom+=(1-CAMU.zoom)*f;
+      if(Math.abs(CAMU.yaw)+Math.abs(CAMU.pitch)+Math.abs(CAMU.zoom-1)<.01)CAMU.on=false;}
+    const off=want.clone().sub(look),L=off.length()||1,r=clamp(L*CAMU.zoom,6,60),az=Math.atan2(off.x,off.z)+CAMU.yaw,el=clamp(Math.asin(clamp(off.y/L,-1,1))+CAMU.pitch,-1.2,1.45);
+    want=look.clone().add(new THREE.Vector3(Math.sin(az)*Math.cos(el)*r,Math.sin(el)*r,Math.cos(az)*Math.cos(el)*r));
+  }
+  const k=clamp(dt*(CAMU.drag?9:2.4),0,1);camPos.lerp(want,k);camLook.lerp(look,k);
   camera.position.copy(camPos);camera.lookAt(camLook);sky.position.copy(camera.position);
 }
+const CAMU={on:false,yaw:0,pitch:0,zoom:1,last:0,drag:null},cv3=renderer.domElement;
+cv3.addEventListener('pointerdown',e=>{if(S.mode!=='play'||S.paused||e.button!==0)return;CAMU.drag={x:e.clientX,y:e.clientY};CAMU.on=true;CAMU.last=performance.now();cv3.setPointerCapture(e.pointerId);cv3.classList.add('grabbing');});
+cv3.addEventListener('pointermove',e=>{if(!CAMU.drag)return;CAMU.yaw-=(e.clientX-CAMU.drag.x)*.006;CAMU.pitch=clamp(CAMU.pitch+(e.clientY-CAMU.drag.y)*.004,-.9,.9);
+  CAMU.drag={x:e.clientX,y:e.clientY};CAMU.last=S.lastInput=performance.now();});
+const camEnd=()=>{CAMU.drag=null;cv3.classList.remove('grabbing');};cv3.addEventListener('pointerup',camEnd);cv3.addEventListener('pointercancel',camEnd);
+cv3.addEventListener('wheel',e=>{if(S.mode!=='play')return;e.preventDefault();CAMU.on=true;CAMU.zoom=clamp(CAMU.zoom*Math.exp(e.deltaY*.0012),.35,3.5);CAMU.last=S.lastInput=performance.now();},{passive:false});
+cv3.addEventListener('dblclick',()=>{Object.assign(CAMU,{on:false,yaw:0,pitch:0,zoom:1});});
 
 /* ---------------- HUD: stats, minimap, sonar ---------------- */
 let hudT=0;
@@ -899,10 +967,18 @@ function updateHud(force){
 let lastToast='';function toastOnce(k,cls){if(lastToast===k)return;lastToast=k;toast(t(k),cls);}
 function fitCanvas(cv){const r=cv.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height};}
 const LVH={high:'#ff6b45',potential:'#ff6b45',unknown:'#c4d0dc',none:'#8fd6cf'};
-const mmCv=$('#mm');
+const mmCv=$('#mm'),MM={w:1,h:1,sc:1};
+/* the map answers clicks: a detected target opens its file, any other point sends B01 there */
+mmCv.addEventListener('pointerdown',e=>{
+  if(S.mode!=='play'||S.paused)return;e.stopPropagation();S.lastInput=performance.now();
+  const r=mmCv.getBoundingClientRect(),x=(e.clientX-r.left-MM.w/2)/MM.sc,y=(MM.h/2-(e.clientY-r.top))/MM.sc;
+  for(const tg of S.tg){if(tg.state==='hidden'||tg.state==='open')continue;const [tx,ty]=tpos(tg,S.time);if(Math.hypot(tx-x,ty-y)*MM.sc<11){openTargetFile(tg);return;}}
+  const b=S.boat;S.goal=[x,y];S.queue=[[x,y]];S.legFrom=[b.x,b.y];S.auto=true;S.thr=MAXV;S.routeDone=false;$('#b-auto').setAttribute('aria-pressed','true');toast(t('goto'));sfx('click');
+});
+function openTargetFile(tg){S.paused=true;releaseKeys();S.cur=tg;S.evHi=S.evPin=null;renderHand();$('#o-hand').hidden=false;$('#o-hand .card').scrollTop=0;$('#d-cont').focus({preventScroll:true});sfx('click');}
 function drawMinimap(){
   const {ctx,w,h}=fitCanvas(mmCv);const m=RUN+12,sx=w/(AREA.x1-AREA.x0+2*m),sy=h/(AREA.y1-AREA.y0+2*m),sc=Math.min(sx,sy);
-  const X=x=>w/2+x*sc,Y=y=>h/2-y*sc;
+  const X=x=>w/2+x*sc,Y=y=>h/2-y*sc;MM.w=w;MM.h=h;MM.sc=sc;
   ctx.fillStyle='#0a1626';ctx.fillRect(0,0,w,h);
   for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const v=S.cov[j*NX+i];if(!v)continue;ctx.fillStyle=v===3?'rgba(143,214,207,.55)':'rgba(62,154,163,.38)';ctx.fillRect(X(AREA.x0+i*CELL),Y(AREA.y0+(j+1)*CELL),CELL*sc+.5,CELL*sc+.5);}
   ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(143,214,207,.7)';
@@ -922,6 +998,7 @@ function drawMinimap(){
     ctx.restore();
     if(tg.state==='hand'||tg.state==='clear'){ctx.strokeStyle=tg.state==='hand'?'#a99cff':'#7a91ab';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(x,y,7.5,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1;}
   }
+  if(S.goal){const gx=X(S.goal[0]),gy=Y(S.goal[1]);ctx.strokeStyle='#8fd6cf';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(gx,gy,5,0,Math.PI*2);ctx.moveTo(gx-9,gy);ctx.lineTo(gx+9,gy);ctx.moveTo(gx,gy-9);ctx.lineTo(gx,gy+9);ctx.stroke();ctx.lineWidth=1;}
   const b=S.boat;ctx.save();ctx.translate(X(b.x),Y(b.y));ctx.rotate(b.h);ctx.fillStyle='#dce6ef';ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(4.5,5);ctx.lineTo(-4.5,5);ctx.closePath();ctx.fill();ctx.restore();
   ctx.fillStyle='rgba(220,230,239,.7)';ctx.font='10px "B612 Mono", monospace';ctx.direction='ltr';ctx.textAlign='left';ctx.fillText('N',6,12);
 }
@@ -975,7 +1052,34 @@ function drawSnip(){
   else if(K==='fish'){ctx.strokeRect(U(-3.6),Z(tg.d-1.8),7.2*pxm,3.6*pxm);ctx.setLineDash([]);lab(ar?'أصداء صغيرة متفرقة':'small scattered echoes',U(0),Z(tg.d-2.6),'center');}
   else if(K==='wreck'){ctx.strokeRect(U(-7.3),Z(DEPTH-3),14.6*pxm,3.2*pxm);ctx.setLineDash([]);lab(ar?'بنية طولها 14 م':'structure, 14 m long',U(0),Z(DEPTH-4),'center');lab(ar?'ظل':'shadow',U(9.6),Z(DEPTH-1),'center');}
   else{ctx.beginPath();ctx.arc(U(.3),Z(DEPTH-.4),1.7*pxm,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);lab(ar?'شكل غير منتظم':'irregular shape',U(.3),Z(DEPTH-2.8),'center');}
+  if(S.evHi)drawEvHi(ctx,tg,U,Z,pxm,w,z0,ar);
 }
+/* the evidence the visitor points at, drawn in amber on the sonar slice */
+function drawEvHi(ctx,tg,U,Z,pxm,w,z0,ar){
+  const K=tg.kind,hk=S.evHi,o=tg.obs,n=o.length,two=n>=2&&o[n-1].t-o[0].t>=10;
+  const cz=K==='mine'||K==='fish'?tg.d:DEPTH-(K==='wreck'?1.3:.45),cu=K==='unknown'?.3:0,rw=K==='wreck'?7.4:K==='fish'?3.4:K==='unknown'?1.6:.75,rh=K==='wreck'?1.7:K==='fish'?1.5:K==='unknown'?.8:.75;
+  ctx.save();ctx.setLineDash([]);ctx.lineWidth=2.2;ctx.strokeStyle='#f2b84b';ctx.fillStyle='rgba(242,184,75,.16)';
+  const say=(s,x,y,al)=>{ctx.save();ctx.font='600 12px "Readex Pro", Tahoma, sans-serif';ctx.direction=ar?'rtl':'ltr';ctx.textBaseline='middle';ctx.textAlign=al||'center';ctx.lineWidth=3;ctx.strokeStyle='rgba(4,11,18,.92)';ctx.fillStyle='#f2b84b';ctx.strokeText(s,x,y);ctx.fillText(s,x,y);ctx.restore();};
+  const arrow=(x1,y1,x2,y2)=>{const a=Math.atan2(y2-y1,x2-x1);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.moveTo(x2,y2);ctx.lineTo(x2-8*Math.cos(a-.45),y2-8*Math.sin(a-.45));ctx.moveTo(x2,y2);ctx.lineTo(x2-8*Math.cos(a+.45),y2-8*Math.sin(a+.45));ctx.stroke();};
+  if(hk==='ev_shape'){ctx.beginPath();ctx.ellipse(U(cu),Z(cz),rw*pxm+6,rh*pxm+6,0,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  else if(hk==='ev_pos'){const top=K==='fish'?z0:cz,bot=K==='fish'?cz:DEPTH,x=U(cu)+rw*pxm+18;arrow(x,Z((top+bot)/2),x,Z(top)+1);arrow(x,Z((top+bot)/2),x,Z(bot)-1);
+    say(t(K==='fish'?'hl_depth':tg.bed?'hl_bed':'hl_above'),x+8,Z((top+bot)/2),'left');}
+  else if(hk==='ev_bg'){ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(0,Z(DEPTH));ctx.lineTo(w,Z(DEPTH));ctx.stroke();ctx.setLineDash([]);say(t(K==='wreck'?'hl_bg_old':'hl_bg_new'),w/2,Z(DEPTH)-14);}
+  else if(hk==='ev_shadow'){if(tg.shadow){const x0=U(cu)+rw*pxm,x1=x0+4.5*pxm;ctx.fillStyle='rgba(242,184,75,.22)';ctx.fillRect(x0,Z(DEPTH-.4),x1-x0,Z(DEPTH+1.2)-Z(DEPTH-.4));ctx.strokeRect(x0,Z(DEPTH-.4),x1-x0,Z(DEPTH+1.2)-Z(DEPTH-.4));say(t('hl_shadow'),(x0+x1)/2,Z(DEPTH-.4)-12);}
+    else say(t('hl_noshadow'),U(0),Z(DEPTH)-16);}
+  else if(hk==='ev_move'){if(!two){say(t('hl_need'),U(cu),Z(cz)-rh*pxm-16);}
+    else{const d=K==='fish'?2.6:K==='mine'?.45:0;if(d){ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(U(cu-d),Z(cz),Math.max(5,rh*pxm*.7),0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;arrow(U(cu-d)+6,Z(cz)-rh*pxm-8,U(cu+d)-6,Z(cz)-rh*pxm-8);}
+      say(t(K==='fish'?'hl_free':K==='mine'?'hl_sway':'hl_still'),U(cu),Z(cz)-rh*pxm-24);}}
+  else if(hk==='ev_cons'){const ax=26,ay=24;arrow(ax-14,ay,ax+18,ay);say(t('hl_h1'),ax+24,ay,'left');
+    if(new Set(o.map(q=>q.axis)).size>=2){arrow(ax,ay+12,ax,ay+42);say(t('hl_h2'),ax+10,ay+30,'left');}}
+  ctx.restore();
+}
+const setEvHi=k=>{if(S.evHi===k)return;S.evHi=k;document.querySelectorAll('#h-ev li').forEach(li=>{const on=li.dataset.k===k;li.classList.toggle('on',on);li.setAttribute('aria-pressed',String(on));});requestAnimationFrame(drawSnip);};
+$('#h-ev').addEventListener('click',e=>{const li=e.target.closest('li');if(!li)return;sfx('click');S.evPin=S.evPin===li.dataset.k?null:li.dataset.k;setEvHi(S.evPin);});
+$('#h-ev').addEventListener('pointerover',e=>{const li=e.target.closest('li');if(li)setEvHi(li.dataset.k);});
+$('#h-ev').addEventListener('pointerleave',()=>setEvHi(S.evPin||null));
+$('#h-ev').addEventListener('focusin',e=>{const li=e.target.closest('li');if(li)setEvHi(li.dataset.k);});
+$('#h-ev').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const li=e.target.closest('li');if(li){e.preventDefault();e.stopPropagation();li.click();}}});
 
 /* ---------------- buoyancy: the vessel floats on the waves ----------------
    Twelve points on the hull bottom each feel how deep they sit in the local wave (Archimedes, per point).
@@ -1017,7 +1121,8 @@ const v3=new THREE.Vector3();
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;
   /* time compression: several fixed sub-steps per frame, so turns and detection behave the same at any speed */
-  if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=dt*S.k,n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
+  if(FX.slowT>0)FX.slowT-=dt;
+  if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=dt*S.k*(FX.slowT>0?.2:1),n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
   else if((S.mode==='brief'||S.mode==='login')&&S.auto)step(dt);
   if(S.mode==='attract'){S.capT+=dt;if(S.capT>6.5){S.capT=0;S.capIdx=(S.capIdx+1)%6;$('#cap-text').textContent=t('a'+(S.capIdx+1));}}
   /* back to the attract demo after 60 s without input, on any screen; a mission running on autopilot is left to finish */
@@ -1028,7 +1133,9 @@ function frame(now){
   const ud=b01.userData;ud.turret.rotation.y=Math.sin(tt*.32)*1.05;ud.whipPivot.rotation.x=-PH.vr*.05+Math.sin(tt*2.3)*.025;ud.whipPivot.rotation.z=-PH.vp*.05-b.v*.012;
   ud.props.forEach((p,i)=>{p.rotation.x+=(i?1:-1)*dt*(3+b.v*14);});
   sun.position.set(bp.x-16,22,bp.z+9);sun.target.position.copy(bp);
-  updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);updateFx(dt,tt,b,bp);
+  updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);updateFx(dt,tt,b,bp);updatePings(dt,tt,bp);
+  const fl=FX.flashT>0?clamp((FX.flashT-=dt)/1.3,0,1):0;ud.fan[0].material.color.setHex(0x8fd6cf).lerp(CORAL,fl);ud.fan[0].material.opacity=.2+.3*fl;
+  if(AUDIO)AUDIO.update({v:b.v/MAXV,uw:FX.uw,mode:S.mode,paused:S.paused});
   for(const tg of S.tg){const o=T3[tg.kind],[px,py]=tpos(tg,S.time);o.g.position.copy(W(px,py,o.y));o.ring.position.copy(W(px,py,1.1));if(o.ring.visible)o.ring.rotation.z=tt*.6;
     if(tg.kind==='mine'){o.g.position.y=o.y+Math.sin(tt*.8)*.15;const g0=W(tg.x,tg.y,0);updateRope(o,g0.x,g0.z,o.g.position,dt,tt);}
     if(o.fish)o.fish.forEach(f=>{const a=f.a+tt*f.s;f.p.position.set(Math.cos(a)*f.rad,f.h+Math.sin(tt*.9+f.a)*.15,Math.sin(a)*f.rad);v3.set(-Math.sin(a),0,Math.cos(a));f.p.rotation.y=Math.atan2(-v3.z,v3.x);});}
@@ -1041,7 +1148,7 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
   get wake(){const c=wkGeo.attributes.color.array;return {n:wakePts.length,count:wkGeo.drawRange.count,alpha:[3,7,11,15,35,39,43,47,203,207].map(i=>+c[i].toFixed(2))};},
   phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
