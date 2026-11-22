@@ -110,7 +110,7 @@ function applyLang(){
 const AREA={x0:-100,x1:100,y0:-62.5,y1:62.5},SP=25,SW=14,SWB=16,RUN=28,DEPTH=18,TXD=1.2,CELL=5;
 const NA=5,NB=8,NX=Math.round((AREA.x1-AREA.x0)/CELL),NY=Math.round((AREA.y1-AREA.y0)/CELL);
 const A_Y=i=>AREA.y0+SP/2+i*SP,B_X=j=>AREA.x0+SP/2+j*SP;
-const RATE=3,MAXV=3.0,MAXYAW=22*D2R,IDLE_MS=60000;
+const RATE=3,MAXV=3.0,MAXYAW=22*D2R,IDLE_MS=60000,ROPE_N=16;
 const ROUTE_S=440;/* autopilot time for the full two-pass route at normal speed, simulated seconds (measured) */
 /* d = depth below the surface; bed = lies on the seabed (seen by multibeam bathymetry and side-scan, not the water column) */
 const TARGETS=[
@@ -161,7 +161,7 @@ const HAZE=0xe2eaee;
 scene.background=new THREE.Color(HAZE);
 scene.fog=new THREE.Fog(HAZE,140,620);
 const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.4,2400);
-scene.add(new THREE.HemisphereLight(0xeaf2f6,0x1c3a45,1.25));
+scene.add(new THREE.HemisphereLight(0xeaf2f6,0x1c3a45,1.0));
 const sun=new THREE.DirectionalLight(0xffffff,1.7);sun.position.set(-160,220,90);scene.add(sun);
 
 /* sky dome: haze at the horizon, light blue above (no skyline, like the B01 render) */
@@ -285,19 +285,38 @@ function buildB01(){
   /* solar panels on the cabin roof, aft of the mast */
   const solarMat=new THREE.MeshStandardMaterial({color:0x0d1b2b,roughness:.25,metalness:.5});
   [-1,1].forEach(s=>{const p=new THREE.Mesh(new THREE.BoxGeometry(1.3,.02,.4),solarMat);p.position.set(-1.35,1.6,s*.24);p.rotation.x=s*.1;g.add(p);});
-  /* mast: whip antenna, comms fins, EO/IR turret on its pedestal, radar dome */
-  const whip=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,1.9,6),dark);whip.position.set(-1.05,2.55,0);g.add(whip);
+  /* mast: whip antenna (sways), comms fins, EO/IR turret on its pedestal (pans while it scans), radar dome */
+  const whipPivot=new THREE.Group();whipPivot.position.set(-1.05,1.6,0);g.add(whipPivot);
+  const whip=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,1.9,6),dark);whip.position.y=.95;whipPivot.add(whip);
   [[-.75,.5],[-.5,.36]].forEach(([x,h])=>{const f=new THREE.Mesh(new THREE.BoxGeometry(.18,h,.07),dark);f.position.set(x,1.62+h/2,0);g.add(f);});
   const ped=new THREE.Mesh(new THREE.CylinderGeometry(.13,.18,.26,6),dark);ped.position.set(-.05,1.78,0);g.add(ped);
-  const ball=new THREE.Mesh(new THREE.SphereGeometry(.27,12,9),new THREE.MeshStandardMaterial({color:0x2c4f76,roughness:.4,metalness:.35,flatShading:true}));ball.position.set(-.05,2.08,0);g.add(ball);
-  const lens=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.07,12),glass);lens.rotation.z=Math.PI/2;lens.position.set(.2,2.08,0);g.add(lens);
+  const turret=new THREE.Group();turret.position.set(-.05,2.08,0);g.add(turret);
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(.27,14,10),new THREE.MeshStandardMaterial({color:0x2c4f76,roughness:.35,metalness:.45,flatShading:true}));turret.add(ball);
+  const lens=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.07,14),glass);lens.rotation.z=Math.PI/2;lens.position.set(.25,0,0);turret.add(lens);
+  const lens2=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.06,10),glass);lens2.rotation.z=Math.PI/2;lens2.position.set(.24,.13,.08);turret.add(lens2);
   const dome=new THREE.Mesh(new THREE.SphereGeometry(.24,12,6,0,Math.PI*2,0,Math.PI/2),dark);dome.position.set(.85,1.63,0);dome.scale.y=.55;g.add(dome);
   /* multibeam gondola under the hull and the side-scan bars */
   const pod=new THREE.Mesh(new THREE.BoxGeometry(1.9,.36,.6),new THREE.MeshStandardMaterial({color:0x8b979b,roughness:.5,metalness:.4}));pod.position.set(.4,-1.13,0);g.add(pod);
   [-1,1].forEach(s=>{const b=new THREE.Mesh(new THREE.BoxGeometry(2.2,.07,.07),new THREE.MeshStandardMaterial({color:0x2f5561}));b.position.set(-.2,-.45,s*.95);g.add(b);});
-  /* navigation lights: masthead, starboard green, port red, stern */
-  const lamp=(c,x,y,z)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),new THREE.MeshBasicMaterial({color:c}));m.position.set(x,y,z);g.add(m);};
-  lamp(0xfff4cf,-1.05,3.52,0);lamp(0x35d07f,2.9,1.0,.72);lamp(0xff4d4d,2.9,1.0,-.72);lamp(0xfff4cf,-4.12,.98,0);
+  /* silent-survey propulsion: two pods on struts under the stern, three-blade propellers, rudders */
+  const podMat=new THREE.MeshStandardMaterial({color:0x22374f,roughness:.5,metalness:.4,flatShading:true}),bronze=new THREE.MeshStandardMaterial({color:0xa8834a,roughness:.35,metalness:.85});
+  const props=[];
+  [-1,1].forEach(s=>{
+    const pd=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,1.3,12),podMat);pd.rotation.z=Math.PI/2;pd.position.set(-3.35,-.72,s*.55);g.add(pd);
+    const st=new THREE.Mesh(new THREE.BoxGeometry(.5,.45,.06),podMat);st.position.set(-3.3,-.45,s*.55);g.add(st);
+    const hub=new THREE.Group();hub.position.set(-4.05,-.72,s*.55);hub.add(new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),bronze));
+    for(let k=0;k<3;k++){const arm=new THREE.Group();arm.rotation.x=k*2*Math.PI/3;const bl=new THREE.Mesh(new THREE.BoxGeometry(.04,.34,.11),bronze);bl.position.y=.18;bl.rotation.y=.55;arm.add(bl);hub.add(arm);}
+    g.add(hub);props.push(hub);
+    const rd=new THREE.Mesh(new THREE.BoxGeometry(.3,.5,.035),podMat);rd.position.set(-4.32,-.6,s*.55);g.add(rd);
+  });
+  /* navigation lights with a soft glow: masthead (on the whip), starboard green, port red, stern */
+  const glow=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),gr=x.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.22,'rgba(255,255,255,.5)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);
+    const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;return tx;})();
+  const lamp=(c,x,y,z,parent)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),new THREE.MeshBasicMaterial({color:c}));m.position.set(x,y,z);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glow,color:c,transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending}));sp.scale.set(.5,.5,1);m.add(sp);(parent||g).add(m);};
+  lamp(0xfff4cf,0,1.92,0,whipPivot);lamp(0x35d07f,2.9,1.0,.72);lamp(0xff4d4d,2.9,1.0,-.72);lamp(0xfff4cf,-4.12,.98,0);
+  g.userData={turret,whipPivot,props};
   /* the gold emblem mid-hull and the hull number near the bow, on both sides */
   const emb=decalTex(256,256,drawEmblem),num=decalTex(256,96,drawHullNo);
   const embMat=new THREE.MeshStandardMaterial({map:emb,transparent:true,alphaTest:.04,roughness:.42,metalness:.25,emissive:0xffffff,emissiveMap:emb,emissiveIntensity:.28,polygonOffset:true,polygonOffsetFactor:-2,depthWrite:false});
@@ -313,10 +332,23 @@ function buildB01(){
       const i0=p(a0,r0),i1=p(a1,r0),o0=p(a0,q(a0)),o1=p(a1,q(a1));pts.push(...i0,...o0,...o1,...i0,...o1,...i1);}
     const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
     return new THREE.Mesh(gg,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,side:THREE.DoubleSide,depthWrite:false}));};
+  /* the hull, cabin and mast cast shadows on each other (decals, glass glints and the sonar fan do not) */
+  g.traverse(o=>{if(o.isMesh){o.receiveShadow=true;o.castShadow=!o.material.transparent&&!o.material.polygonOffset;}});
   const fanClean=fan(.01,DEPTH-TXD,0x8fd6cf,.2),fanDead=fan(DEPTH-TXD,60,0xa6b8ca,.07);fanClean.position.x=.4;fanDead.position.x=.4;g.add(fanClean,fanDead);
+  g.userData.fan=[fanClean,fanDead];
   return g;
 }
 const b01=buildB01();scene.add(b01);
+/* sun shadows only around the vessel: a small shadow box that follows it */
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-7,right:7,top:7,bottom:-7,near:1,far:70});sun.shadow.camera.updateProjectionMatrix();
+sun.shadow.bias=-.0006;sun.shadow.normalBias=.03;scene.add(sun.target);
+/* reflections: an environment map rendered from a small copy of the sky over a dark sea, so metal and glass pick up the light */
+(()=>{const pm=new THREE.PMREMGenerator(renderer),env=new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(40,32,16),sky.material));
+  const seaDisk=new THREE.Mesh(new THREE.CircleGeometry(60,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1e5462}));seaDisk.position.y=-1.5;env.add(seaDisk);
+  const sunDisk=new THREE.Mesh(new THREE.SphereGeometry(2.4,16,8),new THREE.MeshBasicMaterial({color:0xffffff}));sunDisk.position.set(-160,220,90).setLength(34);env.add(sunDisk);
+  scene.environment=pm.fromScene(env,.035).texture;pm.dispose();})();
 
 /* ---------------- the four targets ---------------- */
 const LVC={high:0xff6b45,potential:0xff6b45,unknown:0xc4d0dc,none:0x8fd6cf},HANDC=0xa99cff,CLEARC=0x7a91ab;
@@ -326,9 +358,11 @@ const T3={};
   /* moored mine: sphere with horns on a tether to an anchor */
   {const g=new THREE.Group(),m=mat(0x3b4740);g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.55,1),m));
     for(let k=0;k<8;k++){const h=new THREE.Mesh(new THREE.CylinderGeometry(.04,.06,.32,5),m);const a=k/8*Math.PI*2,e=(k%2?.4:-.25);h.position.set(Math.cos(a)*.55,e,Math.sin(a)*.55);h.lookAt(0,0,0);h.rotateX(Math.PI/2);g.add(h);}
-    const L=DEPTH-9,te=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,L,4),new THREE.MeshBasicMaterial({color:0x6f7a81}));te.position.y=-L/2;g.add(te);
-    const an=new THREE.Mesh(new THREE.BoxGeometry(.8,.4,.8),new THREE.MeshStandardMaterial({color:0x4a524e}));an.position.y=-L+.2;g.add(an);
-    T3.mine={g,mats:[m],y:-9};}
+    /* the anchor stays on the seabed and the tether is a simulated rope (see updateRope) */
+    const an=new THREE.Mesh(new THREE.BoxGeometry(.8,.4,.8),new THREE.MeshStandardMaterial({color:0x4a524e,roughness:.9,flatShading:true}));scene.add(an);
+    const rp=new THREE.Line(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array((ROPE_N+1)*3),3)),new THREE.LineBasicMaterial({color:0x9aa6ad}));
+    rp.frustumCulled=false;scene.add(rp);
+    T3.mine={g,mats:[m],y:-9,anchor:an,rope:rp};}
   /* a small school of fish */
   {const g=new THREE.Group(),m=new THREE.MeshStandardMaterial({color:0x9db4bf,roughness:.35,metalness:.55,flatShading:true,emissive:0x8fd6cf,emissiveIntensity:0}),fish=[];
     for(let i=0;i<16;i++){const r=mulberry(30+i),p=new THREE.Group(),f=new THREE.Mesh(new THREE.ConeGeometry(.11,.42,4),m);f.rotation.z=-Math.PI/2;p.add(f);g.add(p);fish.push({p,a:r()*Math.PI*2,rad:.6+r()*1.7,h:(r()-.5)*1.2,s:.35+r()*.3});}
@@ -878,6 +912,40 @@ function drawSnip(){
   else{ctx.beginPath();ctx.arc(U(.3),Z(DEPTH-.4),1.7*pxm,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);lab(ar?'شكل غير منتظم':'irregular shape',U(.3),Z(DEPTH-2.8),'center');}
 }
 
+/* ---------------- buoyancy: the vessel floats on the waves ----------------
+   Twelve points on the hull bottom each feel how deep they sit in the local wave (Archimedes, per point).
+   The sum gives heave, pitch and roll with inertia and water damping; speed trims the bow up a little,
+   and turning heels the vessel outward. The survey track (x, y, heading) still comes from the helm. */
+const PH={y:.05,vy:0,p:0,vp:0,r:0,vr:0};
+const HULLPTS=[[-3.5,-1],[-3.5,0],[-3.5,1],[-1.2,-1.05],[-1.2,0],[-1.2,1.05],[1.2,-1],[1.2,0],[1.2,1],[3.4,-.55],[3.4,0],[3.4,.55]];
+const GRAV=9.81,DRAFT=.55,BK=GRAV/(HULLPTS.length*DRAFT),HB=-.6,IP=5.9,IR=.9;
+function buoyancy(dt,tt,b,bp){
+  const sh=Math.sin(b.h),ch=Math.cos(b.h),n=Math.max(1,Math.ceil(dt*120)),h=dt/n,vn=b.v/MAXV;
+  for(let s=0;s<n;s++){
+    let F=0,TP=0,TR=0;const sp=Math.sin(PH.p),sr=Math.sin(PH.r);
+    for(const [xi,zi] of HULLPTS){
+      const wx=bp.x+sh*xi+ch*zi,wz=bp.z-ch*xi+sh*zi,yi=PH.y+xi*sp-zi*sr+HB,f=BK*clamp(waveH(wx,wz,tt)-yi,0,1.5);
+      F+=f;TP+=f*xi;TR-=f*zi;
+    }
+    TP+=4.2*vn;TR-=.55*(b.r/MAXYAW)*vn;
+    PH.vy+=(F-GRAV-2.4*PH.vy)*h;PH.y+=PH.vy*h;
+    PH.vp+=(TP/IP-2.6*PH.vp)*h;PH.p=clamp(PH.p+PH.vp*h,-.35,.35);
+    PH.vr+=(TR/IR-2.2*PH.vr)*h;PH.r=clamp(PH.r+PH.vr*h,-.35,.35);
+  }
+}
+/* the moored mine's tether: a rope of linked points from the anchor on the seabed to the mine, moved by a slow current */
+function updateRope(o,ax,az,mp,dt,tt){
+  const R=o.ropeState||(o.ropeState={p:[],q:[]}),top=[mp.x,mp.y-.55,mp.z],bot=[ax,-DEPTH+.4,az],P=R.p,Q=R.q;
+  if(!P.length)for(let i=0;i<=ROPE_N;i++){const f=i/ROPE_N,v=[bot[0]+(top[0]-bot[0])*f,bot[1]+(top[1]-bot[1])*f,bot[2]+(top[2]-bot[2])*f];P.push(v.slice());Q.push(v.slice());}
+  const seg=Math.hypot(top[0]-bot[0],top[1]-bot[1],top[2]-bot[2])*1.015/ROPE_N,h2=Math.min(dt,.05)**2,cx=.5*Math.sin(tt*.21),cz=.35*Math.cos(tt*.17);
+  for(let i=1;i<ROPE_N;i++){const p=P[i],q=Q[i],f=i/ROPE_N;for(let k=0;k<3;k++){const v=(p[k]-q[k])*.94;q[k]=p[k];p[k]+=v+(k===0?cx*f:k===2?cz*f:-.4)*h2;}}
+  P[0]=bot.slice();P[ROPE_N]=top.slice();
+  for(let it=0;it<10;it++)for(let i=0;i<ROPE_N;i++){const a=P[i],c=P[i+1],dx=c[0]-a[0],dy=c[1]-a[1],dz=c[2]-a[2],d=Math.hypot(dx,dy,dz)||1e-6,e=(d-seg)/d*.5;
+    if(i>0){a[0]+=dx*e;a[1]+=dy*e;a[2]+=dz*e;}if(i+1<ROPE_N){c[0]-=dx*e;c[1]-=dy*e;c[2]-=dz*e;}}
+  const arr=o.rope.geometry.attributes.position.array;P.forEach((v,i)=>{arr[i*3]=v[0];arr[i*3+1]=v[1];arr[i*3+2]=v[2];});o.rope.geometry.attributes.position.needsUpdate=true;
+  o.anchor.position.set(ax,-DEPTH+.2,az);
+}
+
 /* ---------------- main loop ---------------- */
 let last=performance.now(),wcdT=0,mmT=0,fpsAcc=0,fpsN=0,fpsChecked=false,startT=performance.now();
 const v3=new THREE.Vector3();
@@ -890,11 +958,14 @@ function frame(now){
   /* back to the attract demo after 60 s without input, on any screen; a mission running on autopilot is left to finish */
   else if(!(S.mode==='play'&&S.auto&&!S.paused)&&now-S.lastInput>IDLE_MS)toAttract();
   const b=S.boat,bp=W(b.x,b.y,0);
-  const wy=waveH(bp.x,bp.z,tt),wx1=waveH(bp.x+2,bp.z,tt)-waveH(bp.x-2,bp.z,tt),wz1=waveH(bp.x,bp.z+2,tt)-waveH(bp.x,bp.z-2,tt);
-  b01.position.set(bp.x,wy*.6+.05,bp.z);b01.rotation.set(0,0,0);b01.rotateY(Math.PI/2-b.h);b01.rotateZ(Math.atan2(wx1*Math.sin(b.h)-wz1*Math.cos(b.h),8)*.6);b01.rotateX(Math.atan2(wx1*Math.cos(b.h)+wz1*Math.sin(b.h),8)*-.6);
+  buoyancy(dt,tt,b,bp);
+  b01.position.set(bp.x,PH.y,bp.z);b01.rotation.set(0,0,0);b01.rotateY(Math.PI/2-b.h);b01.rotateZ(PH.p);b01.rotateX(PH.r);
+  const ud=b01.userData;ud.turret.rotation.y=Math.sin(tt*.32)*1.05;ud.whipPivot.rotation.x=-PH.vr*.05+Math.sin(tt*2.3)*.025;ud.whipPivot.rotation.z=-PH.vp*.05-b.v*.012;
+  ud.props.forEach((p,i)=>{p.rotation.x+=(i?1:-1)*dt*(3+b.v*14);});
+  sun.position.set(bp.x-16,22,bp.z+9);sun.target.position.copy(bp);
   updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);
   for(const tg of S.tg){const o=T3[tg.kind],[px,py]=tpos(tg,S.time);o.g.position.copy(W(px,py,o.y));o.ring.position.copy(W(px,py,1.1));if(o.ring.visible)o.ring.rotation.z=tt*.6;
-    if(tg.kind==='mine')o.g.position.y=o.y+Math.sin(tt*.8)*.15;
+    if(tg.kind==='mine'){o.g.position.y=o.y+Math.sin(tt*.8)*.15;const g0=W(tg.x,tg.y,0);updateRope(o,g0.x,g0.z,o.g.position,dt,tt);}
     if(o.fish)o.fish.forEach(f=>{const a=f.a+tt*f.s;f.p.position.set(Math.cos(a)*f.rad,f.h+Math.sin(tt*.9+f.a)*.15,Math.sin(a)*f.rad);v3.set(-Math.sin(a),0,Math.cos(a));f.p.rotation.y=Math.atan2(-v3.z,v3.x);});}
   renderer.render(scene,camera);
   updateHud(false);
@@ -905,7 +976,8 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,
+  phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
   advance(sec,dt){dt=dt||1/30;const n=Math.round(sec/dt);for(let i=0;i<n;i++){if(!S.paused&&(S.mode==='attract'||S.mode==='play'))step(dt);}
     updateCamera(1,performance.now()/1000);last=performance.now();frame(performance.now());updateHud(true);drawMinimap();drawWCD();
