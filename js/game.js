@@ -20,7 +20,7 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  a3:'الخطوط كل 25 م حتى لا تبقى فجوة في المنطقة الميتة، والانعطاف خارج المنطقة.',
  a4:'الملتي بيم يرى عمود الماء والقاع، والسونار الجانبي يرى القاع وظلاله.',
  a5:'في المنطقة أربعة أهداف: لغم مربوط محتمل، وحطام، وجسم غير معروف، وأسماك.',
- a6:'عند كل رصد يشرح النظام سبب التصنيف، والقرار للمحلل.',
+ a6:'عند كل رصد يحلل الذكاء الاصطناعي الأدلة ويقرر تلقائيًا، ويطلب تمريرة ثانية إذا احتاج.',
  b_title:'مهمتك',b_body:'امسح مدخل الميناء بالتمريرتين، وابحث عن الأهداف تحت الماء، وقرّر في كل هدف بناءً على الأدلة.',
  b_tip:'السونار يحسب البيانات وأنت تمشي مستقيمًا فقط، فخلّ الانعطاف خارج حدود المنطقة.',
  b_keys:'التحكم: الأسهم للقيادة والسرعة، المسافة لتشغيل الطيار الآلي، C لتغيير الكاميرا.',b_touch:'التحكم: أزرار اليسار للتوجيه، وأزرار اليمين للسرعة.',start:'ابدأ المهمة',
@@ -52,11 +52,12 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  fb_note:'ملاحظتك (اختياري)',fb_send:'أرسل التقييم',fb_skip:'تخطي',fb_back:'رجوع للمهمة',fb_need:'اختر عدد النجوم أولًا',
  th_title:'شكرًا لك',th_body:'انحفظ تقييمك لفريق B01. اللعبة ترجع لوضع العرض للزائر اللي بعدك.',th_done:'تم',
  goto:'B01 متجهة للنقطة',arrived:'وصلت. اضغط «طيار آلي» لتكمل المسح.',
- tour1:'هذي B01. قُدها بالأسهم، أو خلّ «طيار آلي» يمسح المنطقة لحاله.',tour2:'هذي خريطة المسح. اضغط على أي نقطة فيها فتروح لها B01، واضغط على هدف مرصود لتشوف ملفه.',
+ tour1:'هذي B01. مع «طيار آلي» تمسح وتقرر لحالها بالذكاء الاصطناعي. وإذا قدتها بالأسهم، أنت اللي تقرر.',tour2:'هذي خريطة المسح. اضغط على أي نقطة فيها فتروح لها B01، واضغط على هدف مرصود لتشوف ملفه.',
  tour3:'هنا يشوف السونار عمود الماء تحت المركبة. الهدف يبان كنقطة مضيئة.',tour4:'لما يُرصد هدف تفتح حزمة الأدلة، وأنت تقرر. اسحب بالماوس لتدير الكاميرا، والعجلة للتقريب.',
  t_next:'التالي',t_done:'ابدأ',t_skip:'تخطي',t_of:'{i} من 4',
  hl_above:'فوق القاع',hl_depth:'تحت السطح',hl_bed:'على القاع',hl_bg_new:'مسح الأساس: ما كان هنا',hl_bg_old:'مسح الأساس: كان موجودًا',hl_shadow:'ظل صوتي',hl_noshadow:'الظل لم يُرَ',
- hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2'},
+ hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2',
+ ai_hand:'الذكاء الاصطناعي سلّمه لفريق التحقق',ai_clear:'الذكاء الاصطناعي: غير خطِر، والمسح مستمر',ai_cross:'يحتاج اتجاهًا ثانيًا: تمريرة متقاطعة تلقائية',ai_conf:'الثقة {c}%'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
  press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera, drag to turn the view',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
@@ -64,7 +65,7 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  a3:'Lines every 25 m leave no gap in the dead zone, and turns happen outside the area.',
  a4:'Multibeam sees the water column and seabed; side-scan sonar sees the seabed and its shadows.',
  a5:'Four targets in the area: a possible moored mine, a wreck, an unknown object and fish.',
- a6:'On each detection the system explains why, and the analyst decides.',
+ a6:'On each detection the onboard AI weighs the evidence and decides by itself, asking for a second pass when it needs one.',
  b_title:'Your mission',b_body:'Survey the port approach with both passes, find the targets under the water, and decide on each one from the evidence.',
  b_tip:'Sonar data counts only while you run straight, so make your turns outside the area.',
  b_keys:'Controls: arrows steer and set speed, Space switches autopilot, C changes camera.',b_touch:'Controls: left buttons steer, right buttons set speed.',start:'Start mission',
@@ -96,11 +97,12 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  fb_note:'Your comment (optional)',fb_send:'Send rating',fb_skip:'Skip',fb_back:'Back to the mission',fb_need:'Pick the stars first',
  th_title:'Thank you',th_body:'Your rating is saved for the B01 team. The game now returns to the demo for the next visitor.',th_done:'Done',
  goto:'B01 heading to the point',arrived:'Arrived. Press Autopilot to continue the survey.',
- tour1:'This is B01. Drive with the arrows, or let Autopilot survey the area.',tour2:'This is the survey map. Click any point to send B01 there, or a detected target to open its file.',
+ tour1:'This is B01. On Autopilot it surveys and decides by itself with its onboard AI. Drive with the arrows and you decide.',tour2:'This is the survey map. Click any point to send B01 there, or a detected target to open its file.',
  tour3:'Here the sonar sees the water column under the vessel. A target shows as a bright spot.',tour4:'When a target is detected, the evidence package opens and you decide. Drag to turn the camera; scroll to zoom.',
  t_next:'Next',t_done:'Start',t_skip:'Skip',t_of:'{i} of 4',
  hl_above:'above the seabed',hl_depth:'below the surface',hl_bed:'on the seabed',hl_bg_new:'baseline: nothing here',hl_bg_old:'baseline: already there',hl_shadow:'acoustic shadow',hl_noshadow:'shadow not seen',
- hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2'}};
+ hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2',
+ ai_hand:'The AI handed it over for verification',ai_clear:'AI: non-hazardous, survey continues',ai_cross:'Needs a second heading: automatic cross-pass',ai_conf:'confidence {c}%'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
@@ -123,7 +125,7 @@ const AREA={x0:-100,x1:100,y0:-62.5,y1:62.5},SP=25,SW=14,SWB=16,RUN=28,DEPTH=18,
 const NA=5,NB=8,NX=Math.round((AREA.x1-AREA.x0)/CELL),NY=Math.round((AREA.y1-AREA.y0)/CELL);
 const A_Y=i=>AREA.y0+SP/2+i*SP,B_X=j=>AREA.x0+SP/2+j*SP;
 const RATE=3,MAXV=3.0,MAXYAW=22*D2R,IDLE_MS=60000,ROPE_N=16;
-const ROUTE_S=440;/* autopilot time for the full two-pass route at normal speed, simulated seconds (measured) */
+const ROUTE_S=600;/* includes the AI's two automatic cross-passes *//* autopilot time for the full two-pass route at normal speed, simulated seconds (measured) */
 /* d = depth below the surface; bed = lies on the seabed (seen by multibeam bathymetry and side-scan, not the water column) */
 const TARGETS=[
   {kind:'wreck',x:-20,y:-38,d:16.2,bed:true},
@@ -839,10 +841,30 @@ function observe(tg,axis,across,px,py){
   const isNew=!tg.obs.some(o=>o.axis===axis);
   tg.obs.push({t:S.time,axis,px,py});
   if(across>=6)tg.shadow=true;
+  /* with autopilot on (and in the demo) the onboard AI decides by itself and the mission never stops;
+     driving by hand, the visitor gets the evidence package and decides */
+  const byHand=S.mode==='play'&&!S.auto;
   if(tg.state==='hidden'){tg.id='T-'+String(++S.nextId).padStart(2,'0');
-    if(S.mode==='play'){tg.state='open';queueHand(tg,tg.bed?'det_sb':'det_wc');}else{tg.state='auto';toast(t('detAttract'),'hit');}}
-  else if(S.mode==='play'&&tg.state==='cross'&&isNew){tg.state='open';queueHand(tg,'again2');}
+    if(byHand){tg.state='open';queueHand(tg,tg.bed?'det_sb':'det_wc');}else autoDecide(tg);}
+  else if(tg.state==='cross'&&isNew){if(byHand){tg.state='open';queueHand(tg,'again2');}else autoDecide(tg);}
   setTg3D(tg);
+}
+/* the AI's rules: hand over what needs verification at once; ask for a second heading only when it can change
+   the decision (a possible mine below 80 %, or echoes whose movement is not known yet); never call anything
+   non-hazardous without movement evidence */
+function autoDecide(tg){
+  const e=ev(tg),K=tg.kind,moveKnown=!!e.rows[4][1];
+  const kind=!tg.crossed&&!e.cons&&((K==='mine'&&e.conf<80)||(K==='fish'&&!moveKnown))?'cross':(K==='fish'&&moveKnown?'clear':'hand');
+  const prev=S.cur;S.cur=tg;decide(kind);S.cur=prev;aiNote(tg,kind);
+  FX.flashT=1.3;FX.bigPing=true;const bd=document.body;bd.classList.remove('det');void bd.offsetWidth;bd.classList.add('det');setTimeout(()=>bd.classList.remove('det'),1400);
+}
+/* a small card per AI decision, newest on top; a click opens the target's evidence */
+function aiNote(tg,kind){
+  const box=$('#ai-notes'),e=ev(tg),d=document.createElement('button');d.type='button';d.className='ai-note plate';
+  d.innerHTML='<span class="ai-h"><span class="lvl lv-'+e.lv+'">'+t('lv_'+e.lv)+'</span><span class="tid n">'+tg.id+'</span></span><b>'+t('k_'+tg.kind)+'</b><span>'+t('ai_'+kind)+'</span><small>'+t('ai_conf').replace('{c}',e.conf)+'</small>';
+  d.addEventListener('click',()=>{if(S.mode==='play'&&!S.paused)openTargetFile(tg);});
+  box.prepend(d);while(box.children.length>3)box.lastChild.remove();
+  setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),450);},8000);
 }
 
 function endMission(){
@@ -910,6 +932,8 @@ function step(dt){
   if(S.mode==='play'&&!S.paused){
     if(S.limit&&S.real>=S.limit){endMission();return;}
     calcCov();
+    /* survey finished while a target still waits for its second heading: the AI decides with what it has */
+    if((S.routeDone||S.covPct>=.999)&&!S.cur&&!S.pend.length)S.tg.forEach(x=>{if(x.state==='cross'&&x.crossed)autoDecide(x);});
     if(!S.cur&&!S.pend.length&&S.tg.every(settled)&&(S.routeDone||S.covPct>=.999)){endMission();return;}
   }
 }

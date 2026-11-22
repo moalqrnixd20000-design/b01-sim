@@ -202,6 +202,16 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
 .ev li{cursor:pointer;padding:4px 6px;margin-inline:-6px;border-inline-start:3px solid transparent}
 .ev li:hover,.ev li.on{background:rgba(242,184,75,.1)}
 .ev li.on{border-inline-start-color:var(--caution)}
+/* AI decision cards, above the bottom edge */
+.ai-notes{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:max(64px,env(safe-area-inset-bottom,0px));z-index:3;display:flex;flex-direction:column;gap:8px;width:min(320px,calc(100% - 32px))}
+.ai-note{display:grid;gap:3px;padding:10px 14px;background:var(--veil);text-align:start;font-size:13px;color:var(--fg-2);box-shadow:inset 0 0 0 1px var(--chine-2);animation:aiin .35s ease-out}
+.ai-note b{font-size:14px;color:var(--fg);font-weight:600}
+.ai-note small{color:var(--fg-3);font-size:12px}
+.ai-note .ai-h{display:flex;align-items:center;gap:8px}
+.ai-note:hover{background:var(--facet)}
+.ai-note.out{opacity:0;transform:translateY(6px);transition:opacity .4s ease,transform .4s ease}
+@keyframes aiin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ai-note{animation:none}.ai-note.out{transition:none}}
 /* first-time tour */
 .tour{position:fixed;inset:0;z-index:6;pointer-events:none}
 .tour.dim{background:rgba(8,17,29,.55)}
@@ -364,6 +374,9 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
   </div>
 </div>
 
+<!-- the AI's decisions on autopilot: small cards, newest on top; a click opens the evidence -->
+<div class="ai-notes" id="ai-notes" aria-live="polite"></div>
+
 <!-- first-time tour: a ring around one part of the screen and a short card -->
 <div class="tour" id="tour" hidden>
   <div class="tour-ring" id="tour-ring"></div>
@@ -408,7 +421,7 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
 </div>
 
 <!-- the version number makes every update load the matching game file, never an old one from the browser cache -->
-<script type="module" src="js/game.js?v=2026-11-22c"></script>
+<script type="module" src="js/game.js?v=2026-11-22e"></script>
 <script>
 /* if the simulator has not drawn a frame 10 s after the page opened (an old cached file, or an error),
    show a clean-reload button instead of a black screen */
