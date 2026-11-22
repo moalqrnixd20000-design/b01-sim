@@ -57,7 +57,8 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  t_next:'التالي',t_done:'ابدأ',t_skip:'تخطي',t_of:'{i} من 4',
  hl_above:'فوق القاع',hl_depth:'تحت السطح',hl_bed:'على القاع',hl_bg_new:'مسح الأساس: ما كان هنا',hl_bg_old:'مسح الأساس: كان موجودًا',hl_shadow:'ظل صوتي',hl_noshadow:'الظل لم يُرَ',
  hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2',
- ai_hand:'الذكاء الاصطناعي سلّمه لفريق التحقق',ai_clear:'الذكاء الاصطناعي: غير خطِر، والمسح مستمر',ai_cross:'يحتاج اتجاهًا ثانيًا: تمريرة متقاطعة تلقائية',ai_conf:'الثقة {c}%'},
+ ai_hand:'الذكاء الاصطناعي سلّمه لفريق التحقق',ai_clear:'الذكاء الاصطناعي: غير خطِر، والمسح مستمر',ai_cross:'يحتاج اتجاهًا ثانيًا: تمريرة متقاطعة تلقائية',ai_conf:'الثقة {c}%',
+ pip_hidden:'هدف لم يُرصد بعد',pip_open:'مرصود، ينتظر القرار',pip_cross:'ينتظر تمريرة متقاطعة',pip_hand:'سُلّم لفريق التحقق',pip_clear:'غير خطِر',cov_tip:'التمريرة الأولى {a}%، والثانية {b}%'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
  press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera, drag to turn the view',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
@@ -102,11 +103,13 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  t_next:'Next',t_done:'Start',t_skip:'Skip',t_of:'{i} of 4',
  hl_above:'above the seabed',hl_depth:'below the surface',hl_bed:'on the seabed',hl_bg_new:'baseline: nothing here',hl_bg_old:'baseline: already there',hl_shadow:'acoustic shadow',hl_noshadow:'shadow not seen',
  hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2',
- ai_hand:'The AI handed it over for verification',ai_clear:'AI: non-hazardous, survey continues',ai_cross:'Needs a second heading: automatic cross-pass',ai_conf:'confidence {c}%'}};
+ ai_hand:'The AI handed it over for verification',ai_clear:'AI: non-hazardous, survey continues',ai_cross:'Needs a second heading: automatic cross-pass',ai_conf:'confidence {c}%',
+ pip_hidden:'Target not found yet',pip_open:'Detected, awaiting a decision',pip_cross:'Awaiting a cross pass',pip_hand:'Handed to the verification team',pip_clear:'Non-hazardous',cov_tip:'First pass {a}%, second pass {b}%'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
 const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
+document.body.classList.toggle('touch-ui',TOUCH);
 function applyLang(){
   document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
   document.querySelectorAll('[data-t]').forEach(el=>{el.textContent=t(el.dataset.t);});
@@ -980,12 +983,40 @@ function updateHud(force){
   $('#s-time-l').textContent=S.limit&&live?t('left'):t('time');
   $('#s-time').textContent=live?fmt(S.limit?S.limit-S.real:S.real):'—';
   $('#s-cov').textContent=Math.round(S.covPct*100)+'%';
+  /* the bar fills with the total: the first pass fills its first half and the second pass the lighter second half
+     (the map's colour for ground covered twice); the tooltip gives each pass on its own */
+  $('#s-covA').style.setProperty('--p',(clamp(S.covPct*2,0,1)*100).toFixed(1)+'%');$('#s-covB').style.setProperty('--p',(clamp(S.covPct*2-1,0,1)*100).toFixed(1)+'%');
+  $('#s-cov-box').title=t('cov_tip').replace('{a}',Math.round(S.covA*100)).replace('{b}',Math.round(S.covB*100));
   const dec=S.tg.filter(x=>x.state==='hand'||x.state==='clear').length,det=S.tg.filter(x=>x.state!=='hidden').length;
   $('#s-tg').textContent=(S.mode==='attract'?det:dec)+'/'+S.tg.length;
+  drawPips();
   $('#s-speed').textContent=(S.boat.v*1.944).toFixed(1)+' kn';
-  $('#s-batt').textContent=Math.round(S.batt)+'%';
+  $('#s-batt').textContent=Math.round(S.batt)+'%';$('#s-batt-i').setAttribute('width',(16.8*clamp(S.batt,0,100)/100).toFixed(2));
+  $('#s-batt-box').classList.toggle('low',S.batt<25);$('#s-batt-box').title=t('batt');
   $('#s-score').textContent=Math.round(S.score);
   if(S.mode==='play'&&!S.paused){if(S.turning)toastOnce('turning','warn');else if(S.outside&&!S.auto)toastOnce('outside','warn');else lastToast='';}
+}
+/* the targets in the top bar use the map's own symbols: hollow until found, the threat-level mark once found,
+   a ring once decided (violet: handed to the verification team, grey: non-hazardous). Decided ones come first. */
+let pipSig='';
+function pipSvg(tg){
+  let s,tip;
+  if(tg.state==='hidden'){s='<rect x="5.6" y="5.6" width="6.8" height="6.8" transform="rotate(45 9 9)" fill="none" stroke="#2f4a67" stroke-width="1.4"/>';tip=t('pip_hidden');}
+  else{
+    const lv=ev(tg).lv,c=LVH[lv];
+    if(lv==='high')s='<rect x="5.2" y="5.2" width="7.6" height="7.6" transform="rotate(45 9 9)" fill="'+c+'"/>';
+    else if(lv==='potential')s='<rect x="5.5" y="5.5" width="7" height="7" transform="rotate(45 9 9)" fill="none" stroke="'+c+'" stroke-width="1.6"/>';
+    else if(lv==='unknown')s='<circle cx="9" cy="9" r="5" fill="'+c+'"/><path d="M7.4 7.6a1.7 1.7 0 1 1 2.3 1.6c-.5.2-.7.5-.7 1v.3M9 12.2v.1" fill="none" stroke="#0a1626" stroke-width="1.3" stroke-linecap="round"/>';
+    else s='<circle cx="9" cy="9" r="3.4" fill="'+c+'"/>';
+    if(tg.state==='hand'||tg.state==='clear')s+='<circle cx="9" cy="9" r="8" fill="none" stroke="'+(tg.state==='hand'?'#a99cff':'#7a91ab')+'" stroke-width="1.4"/>';
+    tip=t('k_'+tg.kind)+(lang==='ar'?'، ':', ')+t('pip_'+tg.state);
+  }
+  return '<svg class="pip" viewBox="0 0 18 18" role="img" aria-label="'+tip+'"><title>'+tip+'</title>'+s+'</svg>';
+}
+function drawPips(){
+  const rank=x=>x.state==='hand'||x.state==='clear'?0:x.state==='hidden'?2:1,list=S.tg.slice().sort((a,b)=>rank(a)-rank(b));
+  const sig=lang+list.map(x=>x.kind+x.state+(x.state==='hidden'?'':ev(x).lv)).join();if(sig===pipSig)return;pipSig=sig;
+  $('#s-pips').innerHTML=list.map(pipSvg).join('');
 }
 let lastToast='';function toastOnce(k,cls){if(lastToast===k)return;lastToast=k;toast(t(k),cls);}
 function fitCanvas(cv){const r=cv.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height};}
@@ -1023,7 +1054,7 @@ function drawMinimap(){
   }
   if(S.goal){const gx=X(S.goal[0]),gy=Y(S.goal[1]);ctx.strokeStyle='#8fd6cf';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(gx,gy,5,0,Math.PI*2);ctx.moveTo(gx-9,gy);ctx.lineTo(gx+9,gy);ctx.moveTo(gx,gy-9);ctx.lineTo(gx,gy+9);ctx.stroke();ctx.lineWidth=1;}
   const b=S.boat;ctx.save();ctx.translate(X(b.x),Y(b.y));ctx.rotate(b.h);ctx.fillStyle='#dce6ef';ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(4.5,5);ctx.lineTo(-4.5,5);ctx.closePath();ctx.fill();ctx.restore();
-  ctx.fillStyle='rgba(220,230,239,.7)';ctx.font='10px "B612 Mono", monospace';ctx.direction='ltr';ctx.textAlign='left';ctx.fillText('N',6,12);
+  ctx.fillStyle='rgba(220,230,239,.7)';ctx.font='10px "B612", sans-serif';ctx.direction='ltr';ctx.textAlign='left';ctx.fillText('N',6,12);
 }
 /* water-column fan: same idea as the console, with the dead zone outside the minimum slant range */
 const SONAR=(()=>{const st=[[0,'#040b12'],[.16,'#08222b'],[.36,'#0f4a52'],[.58,'#27858a'],[.8,'#7fcfc4'],[1,'#effffb']],o=new Uint8ClampedArray(768);const hx=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];for(let i=0;i<256;i++){const v=i/255;let j=0;while(j<st.length-2&&v>st[j+1][0])j++;const a=st[j],bb=st[j+1],f=clamp((v-a[0])/(bb[0]-a[0]),0,1),ca=hx(a[1]),cb=hx(bb[1]);for(let k=0;k<3;k++)o[i*3+k]=ca[k]+(cb[k]-ca[k])*f;}return o;})();
@@ -1052,7 +1083,9 @@ function drawWCD(){
   const f=w/bw,AX=ax*f,AY=top*(h/bh),pxm=f/k;
   ctx.setLineDash([4,3]);ctx.strokeStyle='rgba(220,230,239,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(AX,AY,zb0*pxm,Math.PI/2+maxA,Math.PI/2-maxA,true);ctx.stroke();ctx.setLineDash([]);
   ctx.font='500 11px "Readex Pro", Tahoma, sans-serif';ctx.direction=lang==='ar'?'rtl':'ltr';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3;ctx.strokeStyle='rgba(4,11,18,.85)';ctx.fillStyle='#dce6ef';
-  const la=50*D2R,lr=zb0*(1+1/Math.cos(la))/2*pxm;[-1,1].forEach(s=>{const lx=AX+s*Math.sin(la)*lr,ly=AY+Math.cos(la)*lr;ctx.strokeText(t('dead'),lx,ly);ctx.fillText(t('dead'),lx,ly);});
+  const la=50*D2R,lr=zb0*(1+1/Math.cos(la))/2*pxm,gap=2*Math.sin(la)*lr,tw=ctx.measureText(t('dead')).width;
+  if(tw+10>gap)ctx.font='500 '+Math.max(8,11*(gap-10)/tw).toFixed(1)+'px "Readex Pro", Tahoma, sans-serif';/* a narrow panel: the two labels shrink instead of running into each other */
+  [-1,1].forEach(s=>{const lx=AX+s*Math.sin(la)*lr,ly=AY+Math.cos(la)*lr;ctx.strokeText(t('dead'),lx,ly);ctx.fillText(t('dead'),lx,ly);});
   for(const q of vis){if(q.tg.state==='hidden')continue;const tx=AX+q.u*pxm,ty=AY+(q.tg.bed?zb0-.9:q.z)*pxm,hw=q.tg.kind==='wreck'?7.5*pxm:9;ctx.strokeStyle=LVH[ev(q.tg).lv];ctx.lineWidth=1.4;ctx.strokeRect(tx-hw,ty-9,hw*2,18);}
 }
 /* the evidence slice in the handover package */
