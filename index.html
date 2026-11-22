@@ -407,6 +407,22 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
   </div>
 </div>
 
-<script type="module" src="js/game.js"></script>
+<!-- the version number makes every update load the matching game file, never an old one from the browser cache -->
+<script type="module" src="js/game.js?v=2026-11-22c"></script>
+<script>
+/* if the simulator has not drawn a frame 10 s after the page opened (an old cached file, or an error),
+   show a clean-reload button instead of a black screen */
+(function(){
+  function check(){
+    if(window.__b01Frames>0)return;
+    if(document.visibilityState!=='visible'){setTimeout(check,3000);return;}
+    var d=document.createElement('div');d.className='overlay';d.setAttribute('dir','rtl');
+    d.innerHTML='<div class="card plate login" role="alertdialog" aria-labelledby="rl-t"><h3 id="rl-t">المحاكي ما اشتغل</h3><p>غالبًا عند المتصفح نسخة قديمة محفوظة. اضغط «إعادة التحميل» لتحميل نسخة نظيفة.</p><div class="row"><button class="cta" id="b-reload">إعادة التحميل</button></div></div>';
+    document.body.appendChild(d);
+    document.getElementById('b-reload').onclick=function(){location.replace(location.pathname+'?r='+Date.now());};
+  }
+  setTimeout(check,10000);
+})();
+</script>
 </body>
 </html>

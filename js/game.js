@@ -1117,7 +1117,7 @@ function updateRope(o,ax,az,mp,dt,tt){
 let last=performance.now(),wcdT=0,mmT=0,fpsAcc=0,fpsN=0,fpsChecked=false,startT=performance.now();
 const v3=new THREE.Vector3();
 function frame(now){
-  const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;
+  const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;window.__b01Frames=(window.__b01Frames||0)+1;
   /* time compression: several fixed sub-steps per frame, so turns and detection behave the same at any speed */
   if(FX.slowT>0)FX.slowT-=dt;
   if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=dt*S.k*(FX.slowT>0?.2:1),n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
