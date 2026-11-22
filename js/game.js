@@ -143,7 +143,8 @@ function buildRoute(){
   return r;
 }
 const newTargets=()=>TARGETS.map(d=>({...d,state:'hidden',obs:[],shadow:false,lock:false,id:'',fb:'',cross:null,crossed:false,dec:''}));
-const timeSel=Object.assign({free:true,min:5},store.get('b01sim.time',{}));
+/* a judge has about two minutes: the default is a two-minute mission (new key, so older saved choices do not override it) */
+const timeSel=Object.assign({free:false,min:2},store.get('b01sim.timeq',{}));
 const S={mode:'attract',paused:false,time:0,real:0,k:1,limit:0,score:0,batt:86,cov:new Uint8Array(NX*NY),covPct:0,covA:0,covB:0,
   boat:{x:AREA.x0-RUN-30,y:A_Y(0),h:90*D2R,v:0,r:0},auto:true,route:buildRoute(),wp:0,queue:[],legFrom:null,routeDone:false,
   keys:{left:0,right:0,up:0,down:0},thr:0,cam:'chase',lastInput:0,capIdx:0,capT:0,
@@ -154,7 +155,7 @@ function resetScenario(mode){
   S.mode=mode;S.paused=false;S.time=0;S.real=0;S.score=0;S.batt=86;S.cov.fill(0);S.covPct=S.covA=S.covB=0;
   if(mode==='play'&&!timeSel.free){S.limit=timeSel.min*60;S.k=Math.max(1,ROUTE_S/(.88*S.limit));}else{S.limit=0;S.k=1;}
   Object.assign(S.boat,{x:AREA.x0-RUN-30,y:A_Y(0),h:90*D2R,v:mode==='attract'?MAXV:0,r:0});
-  S.auto=mode==='attract';S.wp=0;S.queue=[];S.legFrom=null;S.goal=null;S.routeDone=false;S.thr=mode==='attract'?MAXV:0;S.trail=[];
+  S.auto=true;S.wp=0;S.queue=[];S.legFrom=null;S.goal=null;S.routeDone=false;S.thr=MAXV;/* the mission starts on autopilot: the AI works from the first second */S.trail=[];
   S.tg=newTargets();S.cur=null;S.pend=[];S.nextId=0;S.result=null;
   S.capIdx=0;S.capT=0;S.lastInput=performance.now();
   S.tg.forEach(setTg3D);crossGuide.visible=false;setSimLabel();
@@ -763,10 +764,10 @@ function renderTimeSel(){
   $('#t-step').hidden=timeSel.free;$('#t-val').textContent=mins(timeSel.min);
   $('#t-note').textContent=timeSel.free?t('t_note_free').replace('{n}',mins(Math.round(ROUTE_S/60))):(timeSel.min*60*.88<ROUTE_S?t('t_note_fast'):t('t_note_ok'));
 }
-const setTime=p=>{Object.assign(timeSel,p);store.set('b01sim.time',timeSel);renderTimeSel();};
+const setTime=p=>{Object.assign(timeSel,p);store.set('b01sim.timeq',timeSel);renderTimeSel();};
 $('#t-free').addEventListener('click',()=>setTime({free:true}));
 $('#t-set').addEventListener('click',()=>setTime({free:false}));
-$('#t-minus').addEventListener('click',()=>setTime({min:Math.max(2,timeSel.min-1)}));
+$('#t-minus').addEventListener('click',()=>setTime({min:Math.max(1,timeSel.min-1)}));
 $('#t-plus').addEventListener('click',()=>setTime({min:Math.min(20,timeSel.min+1)}));
 
 let toastTimer=0;
@@ -856,6 +857,7 @@ function autoDecide(tg){
   const e=ev(tg),K=tg.kind,moveKnown=!!e.rows[4][1];
   const kind=!tg.crossed&&!e.cons&&((K==='mine'&&e.conf<80)||(K==='fish'&&!moveKnown))?'cross':(K==='fish'&&moveKnown?'clear':'hand');
   const prev=S.cur;S.cur=tg;decide(kind);S.cur=prev;aiNote(tg,kind);
+  FX.slowT=2;/* two seconds at real speed, even in a fast mission, so the moment can be seen */
   FX.flashT=1.3;FX.bigPing=true;const bd=document.body;bd.classList.remove('det');void bd.offsetWidth;bd.classList.add('det');setTimeout(()=>bd.classList.remove('det'),1400);
 }
 /* a small card per AI decision, newest on top; a click opens the target's evidence */
@@ -958,7 +960,7 @@ function updateCamera(dt,tt){
     const off=want.clone().sub(look),L=off.length()||1,r=clamp(L*CAMU.zoom,6,60),az=Math.atan2(off.x,off.z)+CAMU.yaw,el=clamp(Math.asin(clamp(off.y/L,-1,1))+CAMU.pitch,-1.2,1.45);
     want=look.clone().add(new THREE.Vector3(Math.sin(az)*Math.cos(el)*r,Math.sin(el)*r,Math.cos(az)*Math.cos(el)*r));
   }
-  const k=clamp(dt*(CAMU.drag?9:2.4),0,1);camPos.lerp(want,k);camLook.lerp(look,k);
+  const k=clamp(dt*(CAMU.drag?9:2.4*(FX.slowT>0?1:Math.max(1,S.k))),0,1);/* in a fast mission the camera keeps up */camPos.lerp(want,k);camLook.lerp(look,k);
   camera.position.copy(camPos);camera.lookAt(camLook);sky.position.copy(camera.position);
 }
 const CAMU={on:false,yaw:0,pitch:0,zoom:1,last:0,drag:null},cv3=renderer.domElement;
@@ -1144,7 +1146,7 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;window.__b01Frames=(window.__b01Frames||0)+1;
   /* time compression: several fixed sub-steps per frame, so turns and detection behave the same at any speed */
   if(FX.slowT>0)FX.slowT-=dt;
-  if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=dt*S.k*(FX.slowT>0?.2:1),n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
+  if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=FX.slowT>0?dt*.35:dt*S.k,n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
   else if((S.mode==='brief'||S.mode==='login')&&S.auto)step(dt);
   if(S.mode==='attract'){S.capT+=dt;if(S.capT>6.5){S.capT=0;S.capIdx=(S.capIdx+1)%6;$('#cap-text').textContent=t('a'+(S.capIdx+1));}}
   /* back to the attract demo after 60 s without input, on any screen; a mission running on autopilot is left to finish */
