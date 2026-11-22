@@ -631,7 +631,8 @@ $('#pin-x').addEventListener('click',()=>{$('#o-pin').hidden=true;S.lastInput=pe
 function closeAdmin(){$('#o-pin').hidden=true;$('#o-admin').hidden=true;S.lastInput=performance.now();}
 function openAdmin(){
   const c=sheetCfg();$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
-  if($('#o-admin').hidden)AD.src='local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
+  /* with the admin key saved, the panel opens on all devices: that is what the team reads */
+  if($('#o-admin').hidden)AD.src=c.key?'all':'local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
 }
 /* reads go by POST too, so the secret never sits in a URL (history, logs) */
 const sheetGet=c=>fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:c.key,action:'list'})}).then(r=>r.json());
@@ -647,6 +648,8 @@ async function loadAdmin(){
     AD.list=[...byId.values()].sort((a,b)=>String(b.start).localeCompare(String(a.start)));renderAdmin();
   }catch(e){AD.list=[];renderAdmin('تعذّر التحميل من Google Sheets. تأكد من الرابط والمفتاح والاتصال بالإنترنت.');}
 }
+/* Arabic count of sessions: جلسة واحدة، جلستان، 3 جلسات، 11 جلسة */
+function nS(n){return n===1?'جلسة واحدة':n===2?'جلستان':n>=3&&n<=10?n+' جلسات':n+' جلسة';}
 const escH=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const starsTxt=n=>{n=Math.round(+n||0);return n?'★'.repeat(n)+'☆'.repeat(5-n):'—';};
 function renderAdmin(msg){
@@ -656,7 +659,7 @@ function renderAdmin(msg){
   const judges=rated.filter(r=>r.role==='محكّم'),visitors=rated.filter(r=>r.role!=='محكّم');
   const durs=L.map(r=>+r.duration_s||0).filter(Boolean),corr=L.filter(r=>r.correct!==''&&r.correct!=null&&!isNaN(+r.correct)).map(r=>+r.correct);
   const pending=sessions().filter(r=>r.status!=='open'&&!r.synced).length,c=sheetCfg(),a=avg(rated);
-  $('#ad-status').textContent='الإرسال إلى Google Sheets مفعّل من كل الأجهزة.'+(c.key?' مفتاح الإدارة محفوظ على هذا الجهاز.':' مفتاح الإدارة غير محفوظ هنا، فالقراءة من الجدول مقفلة.')+(pending?' '+pending+' جلسة بانتظار الإرسال.':'')+(msg?' '+msg:'');
+  $('#ad-status').textContent='الإرسال إلى Google Sheets مفعّل من كل الأجهزة.'+(c.key?' مفتاح الإدارة محفوظ على هذا الجهاز.':' مفتاح الإدارة غير محفوظ هنا، فالقراءة من الجدول مقفلة.')+(pending?' '+nS(pending)+' بانتظار الإرسال.':'')+(msg?' '+msg:'');
   const mini=n=>'<span class="mini" aria-hidden="true">'+[1,2,3,4,5].map(i=>'<svg viewBox="0 0 24 24" class="'+(i<=Math.round(n)?'on':'')+'"><path d="M12 2.8l2.85 5.95 6.5.85-4.75 4.5 1.2 6.45L12 17.4l-5.8 3.15 1.2-6.45L2.65 9.6l6.5-.85z"/></svg>').join('')+'</span>';
   const fmtAvg=x=>x?x.toFixed(1):'—';
   $('#ad-sum').innerHTML=
@@ -690,21 +693,22 @@ $('#ad-save').addEventListener('click',async()=>{
   m.textContent='جارٍ اختبار الاتصال…';
   try{const j=await sheetGet({url,key});
     if(!j.ok){m.textContent='الرابط يرد، لكن المفتاح غير صحيح.';return;}
-    m.textContent='الاتصال يعمل، وفي الجدول '+(j.records||[]).length+' جلسة.';
-    const r=await syncNow();if(r.ok&&r.sent)m.textContent+=' وأُرسلت '+r.sent+' جلسة محفوظة على هذا الجهاز.';
+    const cnt=(j.records||[]).length;m.textContent=cnt?'الاتصال يعمل، وفي الجدول '+nS(cnt)+'.':'الاتصال يعمل، والجدول فاضي للحين.';
+    const r=await syncNow();if(r.ok&&r.sent)m.textContent+=' وأُرسلت '+nS(r.sent)+' محفوظة على هذا الجهاز.';
+    AD.src='all';/* the key works: show what is in the sheet */
   }catch(e){m.textContent='تعذّر الوصول للرابط. تأكد منه ومن الاتصال بالإنترنت.';}
   loadAdmin();
 });
 $('#ad-sync').addEventListener('click',async()=>{
   const m=$('#ad-set-msg');m.textContent='جارٍ الإرسال…';const r=await syncNow();
-  m.textContent=r.ok?(r.sent?'أُرسلت '+r.sent+' جلسة.':'ما فيه شيء بانتظار الإرسال.'):r.msg==='not-set'?'اربط Google Sheets أولًا.':r.msg==='offline'?'ما فيه اتصال بالإنترنت.':'تعذّر الإرسال: '+r.msg;
+  m.textContent=r.ok?(r.sent?'أُرسلت '+nS(r.sent)+'.':'ما فيه شيء بانتظار الإرسال.'):r.msg==='not-set'?'اربط Google Sheets أولًا.':r.msg==='offline'?'ما فيه اتصال بالإنترنت.':'تعذّر الإرسال: '+r.msg;
   loadAdmin();
 });
 $('#ad-pin').addEventListener('click',()=>showPin('change'));
 $('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.'))store.set('b01sim.best',[]);});
 $('#ad-wipe').addEventListener('click',()=>{
   const a=sessions().filter(r=>r.status!=='open'),pend=a.filter(r=>!r.synced).length;
-  if(!confirm('حذف '+a.length+' جلسة محفوظة على هذا الجهاز؟'+(pend?' منها '+pend+' لم تُرسل إلى Google Sheets وستضيع.':' كلها في Google Sheets وتبقى هناك.')+' لا يمكن التراجع.'))return;
+  if(!confirm('حذف '+nS(a.length)+' محفوظة على هذا الجهاز؟'+(pend?' منها '+pend+' لم تُرسل إلى Google Sheets وستضيع.':' كلها في Google Sheets وتبقى هناك.')+' لا يمكن التراجع.'))return;
   store.set(SESS,sess?[sess]:[]);loadAdmin();
 });
 
