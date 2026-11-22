@@ -555,7 +555,7 @@ async function syncNow(){
   const pend=sessions().filter(r=>r.status!=='open'&&!r.synced);if(!pend.length)return {ok:true,sent:0};
   syncing=true;
   try{
-    const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:c.key,records:pend.map(human)})});
+    const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:c.key,action:'save',records:pend.map(human)})});
     const j=await res.json();if(!j||!j.ok)throw new Error((j&&j.error)||('HTTP '+res.status));
     const done=new Set((j.saved||[]).map(String)),a=sessions();a.forEach(r=>{if(done.has(String(r.id)))r.synced=true;});store.set(SESS,a);
     return {ok:true,sent:done.size};
@@ -629,7 +629,8 @@ function openAdmin(){
   const c=sheetCfg();$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
   if($('#o-admin').hidden)AD.src='local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
 }
-const sheetGet=c=>fetch(c.url+(c.url.includes('?')?'&':'?')+'key='+encodeURIComponent(c.key)).then(r=>r.json());
+/* reads go by POST too, so the secret never sits in a URL (history, logs) */
+const sheetGet=c=>fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:c.key,action:'list'})}).then(r=>r.json());
 async function loadAdmin(){
   $('#ad-src-local').setAttribute('aria-pressed',String(AD.src==='local'));$('#ad-src-all').setAttribute('aria-pressed',String(AD.src==='all'));
   if(AD.src==='local'){AD.list=sessions().slice().reverse().map(r=>Object.assign(human(r),{_where:r.status==='open'?'—':r.synced?'في الجدول':'على الجهاز فقط'}));renderAdmin();return;}

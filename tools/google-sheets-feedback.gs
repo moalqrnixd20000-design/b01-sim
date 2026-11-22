@@ -51,12 +51,23 @@ function clean_(v) {
   return /^[=+\-@]/.test(v) ? "'" + v : v;
 }
 
-/* save sessions: a session already in the sheet (same id) is updated, a new one is added */
+/* every request is a POST with the SECRET in the body (never in the URL):
+   action "save" stores sessions, action "list" returns them to the admin panel */
 function doPost(e) {
   let body;
   try { body = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad request' }); }
   if (!body || body.key !== SECRET) return json_({ ok: false, error: 'unauthorized' });
-  const records = Array.isArray(body.records) ? body.records : [];
+  if (body.action === 'list') return list_();
+  return save_(Array.isArray(body.records) ? body.records : []);
+}
+
+/* opening the link in a browser shows nothing but this */
+function doGet() {
+  return json_({ ok: false, error: 'use POST' });
+}
+
+/* save sessions: a session already in the sheet (same id) is updated, a new one is added */
+function save_(records) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -78,9 +89,8 @@ function doPost(e) {
   }
 }
 
-/* read all sessions for the admin panel ("all devices") */
-function doGet(e) {
-  if (!e || !e.parameter || e.parameter.key !== SECRET) return json_({ ok: false, error: 'unauthorized' });
+/* all sessions for the admin panel ("all devices") */
+function list_() {
   const sh = sheet_();
   const last = sh.getLastRow();
   if (last < 2) return json_({ ok: true, records: [] });
