@@ -189,6 +189,13 @@ textarea.field{font-size:16px;line-height:1.7;resize:none}
 .ad-set summary{cursor:pointer;color:var(--fg);font-size:14px}
 .ad-set>*+*{margin-top:10px}
 @media (max-width:900px){.ad-sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* mute button: a speaker with waves, or with a cross when muted */
+.btn.snd{display:grid;place-items:center;padding:6px 11px}
+.btn.snd svg{width:19px;height:19px}
+.btn.snd .x,.btn.snd.off .w{display:none}
+.btn.snd.off .x{display:inline}
+.btn.snd.off{color:var(--fg-3)}
+#ad-vol{accent-color:var(--sea-hi);width:min(320px,100%)}
 /* mouse camera and the clickable map, only while playing */
 .playing #view canvas{cursor:grab}
 #view canvas.grabbing{cursor:grabbing}
@@ -244,6 +251,7 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
   <div class="spacer"></div>
   <button class="btn plate" id="b-auto" aria-pressed="true" data-t="auto">طيار آلي</button>
   <button class="btn plate" id="b-cam" data-t="cam">الكاميرا</button>
+  <button class="btn plate snd" id="b-snd" aria-pressed="false" aria-label="كتم الصوت"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="x" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   <button class="btn plate" id="b-lang">English</button>
 </header>
 
@@ -400,6 +408,7 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
     <details class="ad-set"><summary>الإعدادات وربط Google Sheets</summary>
       <label class="fld"><span>رابط Google Sheets (Web app URL)</span><input id="ad-url" class="field ltr" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
       <label class="fld"><span>المفتاح السري (نفس SECRET في السكربت)</span><input id="ad-key" class="field ltr" type="password" autocomplete="off"></label>
+      <label class="fld"><span>مستوى الصوت في البوث</span><input id="ad-vol" type="range" min="0" max="100" step="5"></label>
       <div class="row"><button class="cta alt" id="ad-save">حفظ واختبار الاتصال</button><button class="cta alt" id="ad-sync">إرسال المحفوظ الآن</button></div>
       <small class="note" id="ad-set-msg" aria-live="polite"></small>
       <div class="row"><button class="cta danger" id="ad-pin">تغيير رمز الدخول</button><button class="cta danger" id="ad-best">تصفير لوحة أفضل النتائج</button><button class="cta danger" id="ad-wipe">حذف بيانات هذا الجهاز</button></div>

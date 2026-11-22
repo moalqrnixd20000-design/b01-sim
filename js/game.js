@@ -2,6 +2,7 @@
    One vessel, one survey area and four targets that follow the auv-platform demo:
    a possible moored mine, a likely wreck, an unknown object and marine life. All data is simulated. */
 import * as THREE from '../vendor/three.module.min.js';
+import {createAudio} from './audio.js';
 
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -11,6 +12,7 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 /* sound hook: js/audio.js sets AUDIO once the page has been touched; until then every call is silent */
 let AUDIO=null;const sfx=(n,o)=>{if(AUDIO)AUDIO.play(n,o);};
+function startAudio(){if(AUDIO){AUDIO.resume();return;}AUDIO=createAudio('sounds/');if(AUDIO){AUDIO.setMuted(store.get('b01sim.mute',false));AUDIO.setVolume(store.get('b01sim.vol',80)/100);}}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 
 /* ---------------- language ---------------- */
@@ -113,7 +115,7 @@ function applyLang(){
   document.querySelectorAll('[data-tl]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.tl));});
   $('#b-lang').textContent=lang==='ar'?'English':'العربية';
   $('#br-ctrl').textContent=TOUCH?t('b_touch'):t('b_keys');
-  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();
+  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();renderSnd();
   if(S.mode==='attract')$('#cap-text').textContent=t('a'+(S.capIdx+1));
   if(S.cur&&!$('#o-hand').hidden)renderHand();
   if(S.mode==='results')renderResults();
@@ -468,6 +470,7 @@ function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){openLog
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down'};
 const adminOpen=()=>!$('#o-admin').hidden||!$('#o-pin').hidden;
 addEventListener('keydown',e=>{
+  startAudio();/* the first key or click on the page is what lets the browser play sound */
   /* the hidden admin panel: Ctrl+Shift+D from any screen, then the passcode */
   if(e.ctrlKey&&e.shiftKey&&e.code==='KeyD'){e.preventDefault();e.stopPropagation();openAdminGate();return;}
   if(adminOpen()){if(e.key==='Escape')closeAdmin();else if(e.key==='Enter'&&e.target&&e.target.id&&e.target.id.startsWith('pin-')){e.preventDefault();pinGo();}return;}
@@ -484,7 +487,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyC')toggleCam();
 });
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k)press(k,0);});
-addEventListener('pointerdown',e=>{if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
+addEventListener('pointerdown',e=>{startAudio();if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
 function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;if(S.goal){S.goal=null;S.queue=[];}$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
 function releaseKeys(){S.keys={left:0,right:0,up:0,down:0};document.querySelectorAll('.tbtn.on').forEach(b=>b.classList.remove('on'));}
 document.querySelectorAll('.tbtn').forEach(b=>{const k=b.dataset.k;
@@ -545,7 +548,7 @@ function renderTour(){
   $('#tour-next').focus({preventScroll:true});
 }
 function closeTour(){if(tourI<0)return;tourI=-1;$('#tour').hidden=true;S.paused=false;S.lastInput=performance.now();}
-$('#tour-next').addEventListener('click',()=>{sfx('click');S.lastInput=performance.now();if(tourI<TOUR.length-1){tourI++;renderTour();}else closeTour();});
+$('#tour-next').addEventListener('click',()=>{S.lastInput=performance.now();if(tourI<TOUR.length-1){tourI++;renderTour();}else closeTour();});
 $('#tour-skip').addEventListener('click',closeTour);
 addEventListener('resize',()=>renderTour());
 
@@ -675,7 +678,7 @@ $('#pin-go').addEventListener('click',pinGo);
 $('#pin-x').addEventListener('click',()=>{$('#o-pin').hidden=true;S.lastInput=performance.now();});
 function closeAdmin(){$('#o-pin').hidden=true;$('#o-admin').hidden=true;S.lastInput=performance.now();}
 function openAdmin(){
-  const c=sheetCfg();$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
+  const c=sheetCfg();$('#ad-vol').value=store.get('b01sim.vol',80);$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
   /* with the admin key saved, the panel opens on all devices: that is what the team reads */
   if($('#o-admin').hidden)AD.src=c.key?'all':'local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
 }
@@ -750,6 +753,7 @@ $('#ad-sync').addEventListener('click',async()=>{
   loadAdmin();
 });
 $('#ad-pin').addEventListener('click',()=>showPin('change'));
+$('#ad-vol').addEventListener('input',e=>{const v=+e.target.value;store.set('b01sim.vol',v);if(AUDIO)AUDIO.setVolume(v/100);});
 $('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.'))store.set('b01sim.best',[]);});
 $('#ad-wipe').addEventListener('click',()=>{
   const a=sessions().filter(r=>r.status!=='open'),pend=a.filter(r=>!r.synced).length;
@@ -816,8 +820,13 @@ function decide(kind){
   if(kind==='cross'){if(!tg.crossed){S.score+=40;tg.crossed=true;}tg.state='cross';tg.fb='fb_cross';planCross(tg);}
   else{const pts=K==='mine'&&kind==='hand'?(e.conf>=80?300:150):SCORE[K][kind];S.score+=pts;tg.state=kind;tg.dec=kind;
     tg.fb=K==='mine'&&kind==='hand'&&e.conf<80?'fb_mine_weak':'fb_'+K+'_'+kind;}
-  setTg3D(tg);renderHand();updateHud(true);
+  setTg3D(tg);renderHand();updateHud(true);sfx(kind==='cross'?'click':'confirm');
 }
+/* a soft click for every button, except the decision buttons, which confirm instead */
+addEventListener('click',e=>{const bt=e.target.closest&&e.target.closest('button');if(bt&&!bt.closest('#h-act'))sfx('click');},true);
+/* mute button in the top bar, remembered on this device */
+function renderSnd(){const m=store.get('b01sim.mute',false),b=$('#b-snd');b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',t(m?'unmute':'mute'));b.title=t(m?'unmute':'mute');b.classList.toggle('off',m);}
+$('#b-snd').addEventListener('click',()=>{const m=!store.get('b01sim.mute',false);store.set('b01sim.mute',m);if(AUDIO)AUDIO.setMuted(m);renderSnd();S.lastInput=performance.now();});
 /* cross-pass: perpendicular to the first heading, running far enough past the target that the boat has finished its turn
    and is straight again before it reaches it; then back to where the survey line was left */
 function planCross(tg){
@@ -1148,7 +1157,7 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,startAudio,get audio(){return AUDIO;},
   get wake(){const c=wkGeo.attributes.color.array;return {n:wakePts.length,count:wkGeo.drawRange.count,alpha:[3,7,11,15,35,39,43,47,203,207].map(i=>+c[i].toFixed(2))};},
   phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
