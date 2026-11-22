@@ -43,7 +43,14 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 :root[dir=rtl] .hud{grid-template-areas:"top top top" "sonar toast map" ". . side"}
 .hud>:not(.top),.top>*{pointer-events:auto}
 .top{grid-area:top;display:grid;grid-template-columns:minmax(max-content,1fr) auto minmax(max-content,1fr);grid-template-areas:"brand mission ctrl";gap:8px;align-items:stretch}
-.brand{grid-area:brand;justify-self:start;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:5px 14px;background:var(--veil);font-size:14px;font-weight:600;line-height:1.3}
+/* the two ends of the bar: help and the name at the reading start, the buttons and home at the other end;
+   they swap sides with the language */
+.tb-s{grid-area:brand;justify-self:start;display:flex;gap:8px;align-items:stretch}
+.tb-e{grid-area:ctrl;justify-self:end;display:flex;gap:8px;align-items:stretch}
+.ibtn{display:grid;place-items:center;min-width:46px;min-height:44px;padding:0 11px;background:var(--veil);color:var(--fg)}
+.ibtn svg{width:22px;height:22px}
+.ibtn:hover{background:var(--facet)}
+.brand{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:5px 14px;background:var(--veil);font-size:14px;font-weight:600;line-height:1.3}
 .brand small{font-weight:400;font-size:11px;color:var(--fg-3)}
 /* the mission instrument: four readings in one plate, split by hairlines */
 .mission{grid-area:mission;display:flex;align-items:stretch;background:var(--veil);padding-inline:4px}
@@ -64,7 +71,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* targets: the map's own symbols, hollow until found, ringed once decided */
 .pips{display:flex;gap:2px}
 .pip{display:block;width:18px;height:18px}
-.ctrl{grid-area:ctrl;justify-self:end;display:flex;background:var(--veil)}
+.ctrl{display:flex;background:var(--veil)}
 .btn{padding:0 15px;min-height:44px;font-size:13px;color:var(--fg)}
 .btn+.btn{border-inline-start:1px solid var(--chine)}
 .btn:hover{background:var(--facet)}
@@ -257,12 +264,89 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
 .tour-card p{margin:0;font-size:15px;line-height:1.75}
 @media (prefers-reduced-motion:reduce){body.det::after{animation:none;opacity:0}.minimap,.tour-ring,.tour-card{transition:none}}
 @media (prefers-reduced-motion:reduce){.star svg{transition:none}}
+/* main menu over the running demo: the scrim is darker at the top and bottom, so the sea still shows through the middle */
+body.menu .hud,body.menu #hint,body.menu #ai-notes,body.menu #caption{display:none}
+.menu{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;overflow:auto;
+  background:linear-gradient(180deg,rgba(8,17,29,.88) 0%,rgba(8,17,29,.52) 40%,rgba(8,17,29,.84) 100%)}
+.mn-top{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:max(14px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.mn-lang{min-height:44px;padding:0 16px;background:var(--veil);font-size:14px}
+.mn-lang:hover{background:var(--facet)}
+.mn-body{margin:auto;width:min(960px,calc(100% - 32px));display:flex;flex-direction:column;align-items:center;gap:12px;padding:10px 0 28px}
+/* the name is the hull number painted on the vessel, set in the cockpit face */
+.mn-title{margin:0;font:700 clamp(64px,10vw,128px)/.95 var(--f-num);letter-spacing:.02em;color:var(--fg)}
+.mn-tag{margin:0 0 12px;font-size:clamp(15px,1.6vw,19px);line-height:1.6;color:var(--fg-2);text-align:center}
+.mn-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%}
+.mode{display:flex;flex-direction:column;gap:7px;padding:10px 10px 16px;background:var(--hull);text-align:start;box-shadow:inset 0 0 0 1px var(--chine-2);transition:box-shadow .15s ease}
+.mode>span{display:block;padding-inline:6px}
+.mode>.mode-art-w{padding:0}
+.mode:hover,.mode:focus-visible{box-shadow:inset 0 0 0 2px var(--sea-hi);outline:none}
+.mode .mode-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:5px}
+.mode-t{font-size:clamp(19px,1.9vw,23px);font-weight:600;line-height:1.3}
+.mode-who{font-size:13px;color:var(--sea-hi);white-space:nowrap}
+.mode-d{font-size:14px;line-height:1.6;color:var(--fg-2)}
+.mode .mode-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;color:var(--fg)}
+.mode-tg{display:flex;align-items:center;gap:6px;color:var(--fg-3);font-size:13px}
+.mode-tg .pip{width:16px;height:16px}
+.howto{margin-top:8px;min-width:12em}
+/* the survey drawings: pass A in the map's teal, pass B faint, the channel outline behind the quick square */
+.mode-art{display:block;width:100%;height:clamp(104px,21vh,180px);background:#0a1626}
+.mode-art *{vector-effect:non-scaling-stroke;fill:none}
+.mode-art .area{stroke:rgba(220,230,239,.85);stroke-width:1.4}
+.mode-art .ghost{stroke:var(--fg-3);stroke-width:1;stroke-dasharray:3 4}
+.mode-art .la{stroke:var(--sea-hi);stroke-width:1.5;stroke-dasharray:6 4}
+.mode-art .lb{stroke:rgba(220,230,239,.5);stroke-width:1.2;stroke-dasharray:1.5 3}
+.mode-art .boat{fill:var(--fg)}
+.mode-art .ln{transform-box:fill-box;animation:.45s cubic-bezier(.3,.7,.3,1) calc(var(--i)*80ms + 150ms) both}
+.mode-art .la{animation-name:grow-x}.mode-art .lb{animation-name:grow-y}
+.mode-art .to-e{transform-origin:left center}.mode-art .to-w{transform-origin:right center}
+.mode-art .to-s{transform-origin:center top}.mode-art .to-n{transform-origin:center bottom}
+@keyframes grow-x{from{transform:scaleX(0)}}
+@keyframes grow-y{from{transform:scaleY(0)}}
+@media (prefers-reduced-motion:reduce){.mode-art .ln{animation:none}.mode{transition:none}}
+/* how to play */
+.how{width:min(620px,100%)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.steps li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;align-items:start}
+.steps b{display:block;font-size:16px;font-weight:600;margin-bottom:2px}
+.card .steps p{font-size:14.5px;line-height:1.7}
+.pic{width:56px;height:56px;padding:4px;background:var(--abyss)}
+.pic *{vector-effect:non-scaling-stroke;fill:none;stroke-width:1.5}
+.pic .p-area{stroke:rgba(220,230,239,.8)}
+.pic .p-a{stroke:var(--sea-hi);stroke-dasharray:4 3}
+.pic .p-b{stroke:rgba(220,230,239,.5);stroke-dasharray:1.5 2.5}
+.pic .p-boat{fill:var(--fg);stroke:none}
+.pic .p-fan{fill:rgba(62,154,163,.3);stroke:var(--sea-hi)}
+.pic .p-bed{stroke:var(--fg-3)}
+.pic .p-hit{fill:var(--target);stroke:none}
+.pic .p-miss{stroke:var(--fg-3)}
+.pic .p-row{stroke:var(--fg-2)}
+.keys{background:var(--abyss);padding:12px 14px}
+.keys h4{margin:0 0 9px;font-size:13px;font-weight:500;color:var(--fg-2)}
+#how-keys{display:flex;flex-wrap:wrap;gap:9px 18px;font-size:13.5px}
+#how-keys>span{display:flex;align-items:center;gap:6px}
+#how-keys p{margin:0;font-size:14px;color:var(--fg)}
+kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 7px;font:600 12px var(--f-text);color:var(--fg);background:var(--facet);box-shadow:inset 0 -2px 0 var(--chine-2),inset 0 0 0 1px var(--chine-2)}
+@media (max-width:640px){
+  .mn-modes{grid-template-columns:minmax(0,1fr)}
+  .mode-art{height:112px}
+  .mn-title{font-size:60px}
+}
+@media (max-height:520px){
+  .mn-body{gap:6px;padding-bottom:12px}
+  .mn-title{font-size:44px}
+  .mn-tag{margin-bottom:4px;font-size:14px}
+  .mode-art{height:76px}
+  .mode{padding:7px 7px 10px;gap:4px}
+  .mode .mode-d{display:none}
+  .howto{margin-top:2px;min-height:38px;padding-block:7px}
+}
 .best li>span:last-child{text-align:end}
 .best li.hd{background:transparent;padding-block:0;font-size:12px;color:var(--fg-3)}
 .best li.me{color:var(--sea-hi)}
 
 /* narrower screens: the mission instrument takes the first row, the name and the buttons the second */
-@media (max-width:980px){
+@media (max-width:1010px){
   .top{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"mission mission mission" "brand . ctrl";row-gap:6px}
   .mission{justify-self:center}
 }
@@ -294,8 +378,9 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
   #h-act,#h-cont{bottom:-18px;margin:0 -18px -18px;padding:12px 18px 18px}
   #h-act .cta,#h-cont .cta{flex:1 1 100%}
   .toast[hidden]{display:block!important;visibility:hidden}
-  .brand{padding:4px 10px}
+  .brand{display:none}
   .btn{padding:0 11px;min-height:38px}
+  .ibtn{min-height:38px;min-width:42px}
 }
 /* phones on their side: one size smaller, so the touch buttons at the bottom keep their space */
 @media (max-height:500px){
@@ -303,7 +388,7 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
   .cbar{width:84px}
   .btn{min-height:36px;padding:0 11px}
   /* while playing, the bar keeps to one row: the instrument and the buttons; the name is on the briefing */
-  .playing .top{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"mission ctrl"}
+  .playing .top{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand mission ctrl"}
   .playing .brand{display:none}
   .playing .mission{justify-self:center}
   .minimap{width:180px}.minimap .cv{height:92px}
@@ -321,17 +406,23 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
 
 <div class="hud">
 <header class="top" aria-label="حالة المهمة">
-  <div class="brand plate"><span data-t="title">محاكاة مهمة B01</span><small data-t="sim">بيانات محاكاة</small></div>
+  <div class="tb-s">
+    <button class="ibtn plate" id="b-help" data-tl="ib_help" aria-label="كيف تلعب"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.4 9.5a2.7 2.7 0 1 1 3.8 2.5c-.8.4-1.2 1-1.2 1.8v.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg></button>
+    <div class="brand plate"><span data-t="title">محاكاة مهمة B01</span><small data-t="sim">بيانات محاكاة</small></div>
+  </div>
   <div class="mission plate">
     <div class="m m-cov" id="s-cov-box"><span class="lab" data-t="cov">التغطية</span><span class="val"><span class="cbar" aria-hidden="true"><i id="s-covA"></i><i id="s-covB"></i></span><b class="n" id="s-cov">0%</b></span></div>
     <div class="m m-tg"><span class="lab" data-t="tgs">الأهداف</span><span class="val"><span class="pips" id="s-pips"></span><b class="n" id="s-tg">0/4</b></span></div>
     <div class="m"><span class="lab" id="s-time-l">الوقت</span><span class="val"><b class="n" id="s-time">—</b></span></div>
     <div class="m m-score"><span class="lab" data-t="score">النقاط</span><span class="val"><b class="n" id="s-score">0</b></span></div>
   </div>
-  <div class="ctrl plate">
-    <button class="btn" id="b-auto" aria-pressed="true" data-t="auto">طيار آلي</button>
-    <button class="btn" id="b-cam" data-t="cam">الكاميرا</button>
-    <button class="btn" id="b-lang">English</button>
+  <div class="tb-e">
+    <div class="ctrl plate">
+      <button class="btn" id="b-auto" aria-pressed="true" data-t="auto">طيار آلي</button>
+      <button class="btn" id="b-cam" data-t="cam">الكاميرا</button>
+      <button class="btn" id="b-lang">English</button>
+    </div>
+    <button class="ibtn plate" id="b-home" data-tl="ib_home" aria-label="القائمة الرئيسية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 11.3 12 4.2l8.4 7.1M6 9.6V20h4.4v-5.4h3.2V20H18V9.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
   </div>
 </header>
 
@@ -358,6 +449,55 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
 </div>
 <p class="hint plate" id="hint" hidden data-t="keys">الأسهم للقيادة، المسافة للطيار الآلي، C للكاميرا</p>
 
+<!-- main menu: the demo keeps running behind it. Help sits at the reading start, the language at the other end. -->
+<div class="menu" id="o-menu" hidden>
+  <div class="mn-top">
+    <button class="ibtn plate" id="mn-help" data-tl="ib_help" aria-label="كيف تلعب"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.4 9.5a2.7 2.7 0 1 1 3.8 2.5c-.8.4-1.2 1-1.2 1.8v.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg></button>
+    <button class="mn-lang plate" id="mn-lang">English</button>
+  </div>
+  <div class="mn-body">
+    <h1 class="mn-title" dir="ltr">B01</h1>
+    <p class="mn-tag" data-t="mn_tag"></p>
+    <div class="mn-modes">
+      <button class="mode plate" id="mn-full"><span class="mode-art-w" id="art-full"></span>
+        <span class="mode-h"><span class="mode-t" data-t="sv_full"></span><span class="mode-who" data-t="sv_full_who"></span></span>
+        <span class="mode-d" data-t="sv_full_d"></span>
+        <span class="mode-meta"><span data-t="sv_full_time"></span><span class="mode-tg"><span class="pips"></span><span data-t="sv_targets"></span></span></span></button>
+      <button class="mode plate" id="mn-quick"><span class="mode-art-w" id="art-quick"></span>
+        <span class="mode-h"><span class="mode-t" data-t="sv_quick"></span><span class="mode-who" data-t="sv_quick_who"></span></span>
+        <span class="mode-d" data-t="sv_quick_d"></span>
+        <span class="mode-meta"><span data-t="sv_quick_time"></span><span class="mode-tg"><span class="pips"></span><span data-t="sv_targets"></span></span></span></button>
+    </div>
+    <button class="cta alt plate howto" id="mn-how" data-t="how_title">كيف تلعب</button>
+  </div>
+</div>
+
+<!-- how to play: the mission loop in three steps, then the controls -->
+<div class="overlay" id="o-how" hidden>
+  <div class="card plate how" role="dialog" aria-modal="true" aria-labelledby="how-t">
+    <h3 id="how-t" data-t="how_title">كيف تلعب</h3>
+    <ol class="steps">
+      <li><svg class="pic" viewBox="0 0 48 48" aria-hidden="true"><rect x="9" y="12" width="30" height="24" class="p-area"/><path d="M3 18h42M3 30h42" class="p-a"/><path d="M17 6v36M31 6v36" class="p-b"/><path d="M8 18l-6-3v6z" class="p-boat"/></svg>
+        <div><b data-t="how1_t"></b><p data-t="how1"></p></div></li>
+      <li><svg class="pic" viewBox="0 0 48 48" aria-hidden="true"><rect x="20" y="3" width="8" height="4" class="p-boat"/><path d="M24 8 9 37a21 21 0 0 0 30 0z" class="p-fan"/><path d="M4 42h40" class="p-bed"/><circle cx="27" cy="26" r="3" class="p-hit"/></svg>
+        <div><b data-t="how2_t"></b><p data-t="how2"></p></div></li>
+      <li><svg class="pic" viewBox="0 0 48 48" aria-hidden="true"><circle cx="11" cy="13" r="3.4" class="p-hit"/><circle cx="11" cy="24" r="3.4" class="p-hit"/><circle cx="11" cy="35" r="3.4" class="p-miss"/><path d="M19 13h22M19 24h18M19 35h20" class="p-row"/></svg>
+        <div><b data-t="how3_t"></b><p data-t="how3"></p></div></li>
+    </ol>
+    <section class="keys" aria-labelledby="hk-t"><h4 id="hk-t" data-t="how_keys">التحكم</h4><div id="how-keys"></div></section>
+    <div class="row"><button class="cta" id="how-ok" data-t="how_ok">فهمت</button></div>
+  </div>
+</div>
+
+<!-- home during a mission: ask first, the mission ends -->
+<div class="overlay" id="o-home" hidden>
+  <div class="card plate login" role="alertdialog" aria-modal="true" aria-labelledby="home-t">
+    <h3 id="home-t" data-t="home_t">ترجع للقائمة الرئيسية؟</h3>
+    <p data-t="home_b"></p>
+    <div class="row"><button class="cta" id="home-go" data-t="home_go">ارجع للقائمة</button><button class="cta alt" id="home-stay" data-t="home_stay">كمّل المهمة</button></div>
+  </div>
+</div>
+
 <!-- visitor sign-in: any number or name, no password -->
 <div class="overlay" id="o-login" hidden>
   <div class="card plate login" role="dialog" aria-labelledby="lg-t">
@@ -367,14 +507,14 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
     <label class="fld"><span id="lg-lab">رقم الزائر أو الاسم</span>
       <input id="v-id" class="field" type="text" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"></label>
     <small class="note" id="lg-note"></small>
-    <div class="row"><button class="cta" id="b-login" data-t="lg_go">ادخل</button></div>
+    <div class="row"><button class="cta" id="b-login" data-t="lg_go">ادخل</button><button class="cta alt" id="b-lg-back" data-t="lg_back">رجوع</button></div>
   </div>
 </div>
 
 <!-- briefing -->
 <div class="overlay" id="o-brief" hidden>
   <div class="card plate" role="dialog" aria-labelledby="br-t">
-    <h3 id="br-t" data-t="b_title">مهمتك</h3>
+    <h3 id="br-t">مهمتك</h3>
     <p data-t="b_body"></p>
     <p data-t="b_tip"></p>
     <div class="tsel" role="group" aria-labelledby="ts-l">
@@ -488,7 +628,7 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
     <p class="ad-status" id="ad-status" aria-live="polite"></p>
     <section class="ad-sum" id="ad-sum" aria-label="ملخص التقييمات"></section>
     <section class="ad-dist" id="ad-dist" aria-label="توزيع النجوم"></section>
-    <div class="ad-tw"><table class="ad-t"><thead><tr><th>الآيدي</th><th>الصفة</th><th>التقييم</th><th>الملاحظة</th><th>البداية</th><th>المدة</th><th>النقاط</th><th>قرارات صحيحة</th><th>الحالة</th><th>مكان الحفظ</th></tr></thead><tbody id="ad-rows"></tbody></table></div>
+    <div class="ad-tw"><table class="ad-t"><thead><tr><th>الآيدي</th><th>الصفة</th><th>المسح والمدة</th><th>التقييم</th><th>الملاحظة</th><th>البداية</th><th>المدة</th><th>النقاط</th><th>قرارات صحيحة</th><th>الحالة</th><th>مكان الحفظ</th></tr></thead><tbody id="ad-rows"></tbody></table></div>
     <p id="ad-empty" hidden>ما فيه جلسات مسجّلة للحين.</p>
     <details class="ad-set"><summary>الإعدادات وربط Google Sheets</summary>
       <label class="fld"><span>رابط Google Sheets (Web app URL)</span><input id="ad-url" class="field ltr" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
@@ -501,7 +641,7 @@ body.det::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:4;
 </div>
 
 <!-- the version number makes every update load the matching game file, never an old one from the browser cache -->
-<script type="module" src="js/game.js?v=2026-11-22h"></script>
+<script type="module" src="js/game.js?v=2026-11-23b1"></script>
 <script>
 /* if the simulator has not drawn a frame 10 s after the page opened (an old cached file, or an error),
    show a clean-reload button instead of a black screen */

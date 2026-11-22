@@ -7,7 +7,10 @@ const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const D2R=Math.PI/180;
 const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;};
-const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+/* the test copy keeps its own saved data (b01beta.*), apart from the main simulator on the same site.
+   Set BETA to false when this version becomes the main one. */
+const BETA=true,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
+const store={get(k,d){try{const v=localStorage.getItem(KEY(k));return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(KEY(k),JSON.stringify(v));}catch(e){}}};
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 
@@ -58,7 +61,15 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  hl_above:'فوق القاع',hl_depth:'تحت السطح',hl_bed:'على القاع',hl_bg_new:'مسح الأساس: ما كان هنا',hl_bg_old:'مسح الأساس: كان موجودًا',hl_shadow:'ظل صوتي',hl_noshadow:'الظل لم يُرَ',
  hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2',
  ai_hand:'الذكاء الاصطناعي سلّمه لفريق التحقق',ai_clear:'الذكاء الاصطناعي: غير خطِر، والمسح مستمر',ai_cross:'يحتاج اتجاهًا ثانيًا: تمريرة متقاطعة تلقائية',ai_conf:'الثقة {c}%',
- pip_hidden:'هدف لم يُرصد بعد',pip_open:'مرصود، ينتظر القرار',pip_cross:'ينتظر تمريرة متقاطعة',pip_hand:'سُلّم لفريق التحقق',pip_clear:'غير خطِر',cov_tip:'التمريرة الأولى {a}%، والثانية {b}%'},
+ pip_hidden:'هدف لم يُرصد بعد',pip_open:'مرصود، ينتظر القرار',pip_cross:'ينتظر تمريرة متقاطعة',pip_hand:'سُلّم لفريق التحقق',pip_clear:'غير خطِر',cov_tip:'التمريرة الأولى {a}%، والثانية {b}%',
+ mn_tag:'امسح الممر، اكتشف الأهداف، وقرّر بالأدلة.',sv_full:'المسح الكامل',sv_quick:'المسح السريع',sv_full_d:'تمريرتان فوق الممر كله',sv_quick_d:'مربع صغير وسط الممر، بنفس الأهداف الأربعة',
+ sv_full_who:'للزوار',sv_quick_who:'للمحكّمين',sv_full_time:'نحو 10 دقائق',sv_quick_time:'نحو دقيقتين',sv_targets:'4 أهداف',
+ how_title:'كيف تلعب',how1_t:'امسح المنطقة',how1:'B01 تمشي على خطوط أفقية، ثم على خطوط عمودية فوق المنطقة نفسها. الطيار الآلي يسويها عنك.',
+ how2_t:'ارصد الأهداف',how2:'السونار يشوف تحت الماء، وأي هدف تمرّ فوقه المركبة ينرصد.',how3_t:'قرّر بالأدلة',how3:'سلّمه لفريق التحقق، أو اطلب تمريرة من اتجاه ثانٍ، أو اعتبره غير خطِر.',
+ how_keys:'التحكم',k_steer:'توجيه',k_speed:'السرعة',k_auto:'طيار آلي',k_cam:'الكاميرا',k_drag:'اسحب بالماوس لتدوير الكاميرا',k_space:'مسافة',how_ok:'فهمت',
+ home_t:'ترجع للقائمة الرئيسية؟',home_b:'المهمة الحالية تنتهي هنا.',home_go:'ارجع للقائمة',home_stay:'كمّل المهمة',ib_home:'القائمة الرئيسية',ib_help:'كيف تلعب',
+ lg_back:'رجوع',ai_crossB:'يحتاج اتجاهًا ثانيًا: التمريرة الثانية تمرّ فوقه',b_title_sv:'مهمتك: {s}',
+ t_note_quick:'المسح السريع بالطيار الآلي يأخذ نحو دقيقتين، والوقت يتوقف وأنت تقرأ حزمة التسليم.'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
  press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera, drag to turn the view',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
@@ -104,7 +115,15 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  hl_above:'above the seabed',hl_depth:'below the surface',hl_bed:'on the seabed',hl_bg_new:'baseline: nothing here',hl_bg_old:'baseline: already there',hl_shadow:'acoustic shadow',hl_noshadow:'shadow not seen',
  hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2',
  ai_hand:'The AI handed it over for verification',ai_clear:'AI: non-hazardous, survey continues',ai_cross:'Needs a second heading: automatic cross-pass',ai_conf:'confidence {c}%',
- pip_hidden:'Target not found yet',pip_open:'Detected, awaiting a decision',pip_cross:'Awaiting a cross pass',pip_hand:'Handed to the verification team',pip_clear:'Non-hazardous',cov_tip:'First pass {a}%, second pass {b}%'}};
+ pip_hidden:'Target not found yet',pip_open:'Detected, awaiting a decision',pip_cross:'Awaiting a cross pass',pip_hand:'Handed to the verification team',pip_clear:'Non-hazardous',cov_tip:'First pass {a}%, second pass {b}%',
+ mn_tag:'Survey the channel, find the targets, decide on the evidence.',sv_full:'Full survey',sv_quick:'Quick survey',sv_full_d:'Two passes over the whole channel',sv_quick_d:'A small square in the middle of the channel, with the same four targets',
+ sv_full_who:'For visitors',sv_quick_who:'For judges',sv_full_time:'About 10 minutes',sv_quick_time:'About 2 minutes',sv_targets:'4 targets',
+ how_title:'How to play',how1_t:'Survey the area',how1:'B01 runs horizontal lines, then vertical lines over the same area. Autopilot does it for you.',
+ how2_t:'Find the targets',how2:'The sonar sees under the water. Any target B01 passes over is detected.',how3_t:'Decide on the evidence',how3:'Hand it to the verification team, ask for a pass from a second heading, or call it non-hazardous.',
+ how_keys:'Controls',k_steer:'Steer',k_speed:'Speed',k_auto:'Autopilot',k_cam:'Camera',k_drag:'Drag with the mouse to turn the view',k_space:'Space',how_ok:'Got it',
+ home_t:'Back to the main menu?',home_b:'The current mission ends here.',home_go:'Go to the menu',home_stay:'Keep playing',ib_home:'Main menu',ib_help:'How to play',
+ lg_back:'Back',ai_crossB:'Needs a second heading: the second pass will cross it',b_title_sv:'Your mission: {s}',
+ t_note_quick:'A quick survey on autopilot takes about 2 minutes; the clock stops while you read a handover package.'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
@@ -114,7 +133,8 @@ function applyLang(){
   document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
   document.querySelectorAll('[data-t]').forEach(el=>{el.textContent=t(el.dataset.t);});
   document.querySelectorAll('[data-tl]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.tl));});
-  $('#b-lang').textContent=lang==='ar'?'English':'العربية';
+  $('#b-lang').textContent=$('#mn-lang').textContent=lang==='ar'?'English':'العربية';
+  renderBriefTitle();renderHow();
   $('#br-ctrl').textContent=TOUCH?t('b_touch'):t('b_keys');
   setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();
   if(S.mode==='attract')$('#cap-text').textContent=t('a'+(S.capIdx+1));
@@ -124,17 +144,26 @@ function applyLang(){
 }
 
 /* ---------------- scenario ---------------- */
-const AREA={x0:-100,x1:100,y0:-62.5,y1:62.5},SP=25,SW=14,SWB=16,RUN=28,DEPTH=18,TXD=1.2,CELL=5;
-const NA=5,NB=8,NX=Math.round((AREA.x1-AREA.x0)/CELL),NY=Math.round((AREA.y1-AREA.y0)/CELL);
+const SP=25,SW=14,SWB=16,DEPTH=18,TXD=1.2,CELL=5;
+/* two surveys at normal speed with the same four targets, line spacing and sensors:
+   the whole channel for visitors (about 10 minutes on autopilot) and a 2 x 2 square in its middle for judges (about 2 minutes).
+   d = depth below the surface; bed = lies on the seabed (seen by multibeam bathymetry and side-scan, not the water column) */
+const SURVEYS={
+  full:{area:{x0:-100,x1:100,y0:-62.5,y1:62.5},na:5,nb:8,run:28,routeS:600,targets:[
+    {kind:'wreck',x:-20,y:-38,d:16.2,bed:true},
+    {kind:'unknown',x:70,y:-15,d:17.1,bed:true},
+    {kind:'mine',x:35,y:8,d:9,bed:false},
+    {kind:'fish',x:-55,y:30,d:8,bed:false}]},
+  quick:{area:{x0:-25,x1:25,y0:-25,y1:25},na:2,nb:2,run:28,routeS:120,targets:[
+    {kind:'wreck',x:-14,y:-10,d:16.2,bed:true},
+    {kind:'unknown',x:12,y:-14,d:17.1,bed:true},
+    {kind:'mine',x:9,y:10,d:9,bed:false},
+    {kind:'fish',x:-10,y:13,d:8,bed:false}]}};
+let SURVEY,AREA,NA,NB,NX,NY,RUN,ROUTE_S,TARGETS;
+function applySurvey(k){const c=SURVEYS[k];SURVEY=k;AREA=c.area;NA=c.na;NB=c.nb;RUN=c.run;ROUTE_S=c.routeS;TARGETS=c.targets;NX=Math.round((AREA.x1-AREA.x0)/CELL);NY=Math.round((AREA.y1-AREA.y0)/CELL);}
+applySurvey('full');
 const A_Y=i=>AREA.y0+SP/2+i*SP,B_X=j=>AREA.x0+SP/2+j*SP;
 const RATE=3,MAXV=3.0,MAXYAW=22*D2R,IDLE_MS=60000,ROPE_N=16;
-const ROUTE_S=600;/* includes the AI's two automatic cross-passes *//* autopilot time for the full two-pass route at normal speed, simulated seconds (measured) */
-/* d = depth below the surface; bed = lies on the seabed (seen by multibeam bathymetry and side-scan, not the water column) */
-const TARGETS=[
-  {kind:'wreck',x:-20,y:-38,d:16.2,bed:true},
-  {kind:'unknown',x:70,y:-15,d:17.1,bed:true},
-  {kind:'mine',x:35,y:8,d:9,bed:false},
-  {kind:'fish',x:-55,y:30,d:8,bed:false}];
 const GOOD={mine:'hand',wreck:'hand',unknown:'hand',fish:'clear'};
 /* autopilot route: every line runs RR past the area on both ends, so turns stay outside it */
 function buildRoute(){
@@ -213,9 +242,15 @@ const W=(x,y,h)=>new THREE.Vector3(x,h,-y);
 /* survey lines drawn on the water like an overlay */
 const guides=new THREE.Group();scene.add(guides);
 function dashLine(pts,color,opacity,dash,gap){const g=new THREE.BufferGeometry().setFromPoints(pts);const l=new THREE.Line(g,new THREE.LineDashedMaterial({color,dashSize:dash,gapSize:gap,transparent:true,opacity}));l.computeLineDistances();return l;}
-for(let i=0;i<NA;i++)guides.add(dashLine([W(AREA.x0-RUN,A_Y(i),.9),W(AREA.x1+RUN,A_Y(i),.9)],0x8fd6cf,.75,6,4));
-for(let j=0;j<NB;j++)guides.add(dashLine([W(B_X(j),AREA.y0-RUN,.9),W(B_X(j),AREA.y1+RUN,.9)],0xdce6ef,.28,1.5,4));
-guides.add(dashLine([W(AREA.x0,AREA.y0,1),W(AREA.x1,AREA.y0,1),W(AREA.x1,AREA.y1,1),W(AREA.x0,AREA.y1,1),W(AREA.x0,AREA.y0,1)],0xffffff,.8,3,2));
+function drawGuides(){
+  guides.children.slice().forEach(l=>{guides.remove(l);l.geometry.dispose();l.material.dispose();});
+  for(let i=0;i<NA;i++)guides.add(dashLine([W(AREA.x0-RUN,A_Y(i),.9),W(AREA.x1+RUN,A_Y(i),.9)],0x8fd6cf,.75,6,4));
+  for(let j=0;j<NB;j++)guides.add(dashLine([W(B_X(j),AREA.y0-RUN,.9),W(B_X(j),AREA.y1+RUN,.9)],0xdce6ef,.28,1.5,4));
+  guides.add(dashLine([W(AREA.x0,AREA.y0,1),W(AREA.x1,AREA.y0,1),W(AREA.x1,AREA.y1,1),W(AREA.x0,AREA.y1,1),W(AREA.x0,AREA.y0,1)],0xffffff,.8,3,2));
+}
+drawGuides();
+/* switch survey: the coverage grid, the autopilot route and the lines on the water follow the chosen area */
+function setSurvey(k){if(k===SURVEY&&S.cov.length===NX*NY)return;applySurvey(k);S.cov=new Uint8Array(NX*NY);S.route=buildRoute();drawGuides();}
 const crossGuide=dashLine([W(0,0,1),W(0,1,1)],0xff6b45,.95,5,3);crossGuide.visible=false;scene.add(crossGuide);
 
 /* ---------------- B01 model, after the team's render: faceted camouflage hull, raised cabin, mast ---------------- */
@@ -468,13 +503,18 @@ function updateFx(dt,tt,b,bp){
 }
 
 /* ---------------- input ---------------- */
-function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){openLogin();return true;}return false;}
+function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){if($('#o-menu').hidden&&$('#o-how').hidden)openMenu();return true;}return false;}
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down'};
 const adminOpen=()=>!$('#o-admin').hidden||!$('#o-pin').hidden;
 addEventListener('keydown',e=>{
   /* the hidden admin panel: Ctrl+Shift+D from any screen, then the passcode */
   if(e.ctrlKey&&e.shiftKey&&e.code==='KeyD'){e.preventDefault();e.stopPropagation();openAdminGate();return;}
   if(adminOpen()){if(e.key==='Escape')closeAdmin();else if(e.key==='Enter'&&e.target&&e.target.id&&e.target.id.startsWith('pin-')){e.preventDefault();pinGo();}return;}
+  if(!$('#o-how').hidden){S.lastInput=performance.now();if(e.key==='Escape'){e.preventDefault();closeHow();}return;}
+  if(!$('#o-home').hidden){S.lastInput=performance.now();if(e.key==='Escape'){e.preventDefault();homeStay();}return;}
+  /* the menu answers the arrow keys: they move between the two surveys and "how to play" */
+  if(!$('#o-menu').hidden){S.lastInput=performance.now();if(/^Arrow/.test(e.key)){e.preventDefault();const L=['#mn-full','#mn-quick','#mn-how'].map(x=>$(x)),i=L.indexOf(document.activeElement),
+    d=e.key==='ArrowDown'||e.key===(lang==='ar'?'ArrowLeft':'ArrowRight')?1:-1;L[((i<0?0:i+d)+L.length)%L.length].focus();}return;}
   if(tourI>=0){S.lastInput=performance.now();if(e.key==='Escape'){e.preventDefault();closeTour();}return;}
   /* typing in the entry or feedback fields is never a game control */
   if(e.target&&e.target.matches&&e.target.matches('input,textarea')){S.lastInput=performance.now();if(e.target.id==='v-id'&&e.key==='Enter'){e.preventDefault();doLogin();}return;}
@@ -503,7 +543,7 @@ $('#b-lang').addEventListener('click',()=>{lang=lang==='ar'?'en':'ar';store.set(
 
 /* ---------------- flow: attract, entry, briefing, play, results, rating ---------------- */
 /* entry gate: visitor or judge, any ID (no password); a visitor may leave it empty and take the next number on this device */
-const ENTRY={role:'visitor'};
+const ENTRY={role:'visitor'},PICK={survey:'full'};
 function renderLogin(){
   const n=store.get('b01sim.nextNo',1),j=ENTRY.role==='judge',note=$('#lg-note');
   $('#r-vis').setAttribute('aria-pressed',String(!j));$('#r-judge').setAttribute('aria-pressed',String(j));
@@ -511,7 +551,7 @@ function renderLogin(){
   $('#v-id').placeholder=j?t('lg_ph_j'):t('lg_ph').replace('{n}',n);
   note.textContent=j?'':t('lg_auto').replace('{n}',n);note.classList.remove('err');
 }
-function openLogin(){S.mode='login';$('#caption').hidden=true;ENTRY.role='visitor';const inp=$('#v-id');inp.value='';renderLogin();$('#o-login').hidden=false;inp.focus({preventScroll:true});}
+function openLogin(role){S.mode='login';$('#caption').hidden=true;closeMenu();ENTRY.role=role||'visitor';const inp=$('#v-id');inp.value='';renderLogin();$('#o-login').hidden=false;inp.focus({preventScroll:true});}
 $('#r-vis').addEventListener('click',()=>{ENTRY.role='visitor';renderLogin();$('#v-id').focus();});
 $('#r-judge').addEventListener('click',()=>{ENTRY.role='judge';renderLogin();$('#v-id').focus();});
 function doLogin(){
@@ -521,17 +561,65 @@ function doLogin(){
   store.set('b01sim.nextNo',n);S.visitor=v;inp.blur();openSession(v,ENTRY.role);openBrief();
 }
 $('#b-login').addEventListener('click',doLogin);
-function openBrief(){S.mode='brief';$('#caption').hidden=true;$('#o-login').hidden=true;renderTimeSel();$('#o-brief').hidden=false;$('#b-start').focus();showControls();}
-function startPlay(){$('#o-brief').hidden=true;resetScenario('play');S.cam='chase';Object.assign(CAMU,{on:false,yaw:0,pitch:0,zoom:1,drag:null});showControls();updateHud(true);
+function renderBriefTitle(){$('#br-t').textContent=t('b_title_sv').replace('{s}',t('sv_'+PICK.survey));}
+function openBrief(){S.mode='brief';$('#caption').hidden=true;$('#o-login').hidden=true;closeMenu();renderBriefTitle();renderTimeSel();$('#o-brief').hidden=false;$('#b-start').focus();showControls();}
+function startPlay(){$('#o-brief').hidden=true;setSurvey(PICK.survey);resetScenario('play');S.cam='chase';Object.assign(CAMU,{on:false,yaw:0,pitch:0,zoom:1,drag:null});showControls();updateHud(true);
   if(!tourDone){tourDone=true;openTour();}}
 function showControls(){const play=S.mode==='play';document.body.classList.toggle('playing',play);$('#t-steer').hidden=!(play&&TOUCH);$('#t-thr').hidden=!(play&&TOUCH);$('#hint').hidden=!(play&&!TOUCH);$('#b-side').hidden=!(play&&!!sess);}
 function toAttract(){
   /* a visitor who walks away still leaves a session; stars picked but not sent are kept */
   if(sess){if(S.mode==='feedback'&&FB.stars)Object.assign(sess,{stars:FB.stars,review:$('#fb-text').value.trim().slice(0,600)});closeSession(S.mode==='feedback'&&FB.stars?'partial':'left');}
-  clearTimeout(thanksTimer);tourI=-1;['#o-login','#o-brief','#o-hand','#o-res','#o-fb','#o-thanks','#tour'].forEach(s=>$(s).hidden=true);
-  resetScenario('attract');S.visitor='';$('#caption').hidden=false;$('#cap-text').textContent=t('a1');showControls();
+  clearTimeout(thanksTimer);tourI=-1;howResume=homeResume=false;['#o-login','#o-brief','#o-hand','#o-res','#o-fb','#o-thanks','#tour','#o-how','#o-home'].forEach(s=>$(s).hidden=true);
+  setSurvey('full');resetScenario('attract');S.visitor='';$('#caption').hidden=true;$('#cap-text').textContent=t('a1');showControls();openMenu();
 }
 $('#b-start').addEventListener('click',startPlay);
+
+/* ---------------- main menu: the two surveys and how to play, over the running demo ---------------- */
+/* each card draws its survey at the same scale; the quick square sits inside a faint outline of the whole channel.
+   The lines draw themselves in route order when the menu opens. */
+function surveyArt(k){
+  const F=SURVEYS.full,FA=F.area,c=SURVEYS[k],a=c.area,r=c.run,m=F.run+12,X0=FA.x0-m,Y1=FA.y1+m,w=FA.x1-FA.x0+2*m,h=FA.y1-FA.y0+2*m;
+  const X=x=>(x-X0).toFixed(1),Y=y=>(Y1-y).toFixed(1),ay=j=>a.y0+SP/2+j*SP,bx=j=>a.x0+SP/2+j*SP;let s='',i=0;
+  if(k!=='full')s+='<rect class="ghost" x="'+X(FA.x0)+'" y="'+Y(FA.y1)+'" width="'+(FA.x1-FA.x0)+'" height="'+(FA.y1-FA.y0)+'"/>';
+  for(let j=0;j<c.na;j++){const y=ay(j);s+='<line class="ln la '+(j%2?'to-w':'to-e')+'" style="--i:'+(i++)+'" x1="'+X(a.x0-r)+'" y1="'+Y(y)+'" x2="'+X(a.x1+r)+'" y2="'+Y(y)+'"/>';}
+  for(let j=0;j<c.nb;j++){const x=bx(c.nb-1-j);s+='<line class="ln lb '+(j%2?'to-n':'to-s')+'" style="--i:'+(i++)+'" x1="'+X(x)+'" y1="'+Y(a.y1+r)+'" x2="'+X(x)+'" y2="'+Y(a.y0-r)+'"/>';}
+  s+='<rect class="area" x="'+X(a.x0)+'" y="'+Y(a.y1)+'" width="'+(a.x1-a.x0)+'" height="'+(a.y1-a.y0)+'"/>';
+  const b0=a.x0-r-30,y0=ay(0);s+='<path class="boat" d="M'+X(b0+8)+' '+Y(y0)+'l-13 -6v12z"/>';
+  return '<svg class="mode-art" viewBox="0 0 '+w.toFixed(1)+' '+h.toFixed(1)+'" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+s+'</svg>';
+}
+const HOLLOW='<svg class="pip" viewBox="0 0 18 18" aria-hidden="true"><rect x="5.6" y="5.6" width="6.8" height="6.8" transform="rotate(45 9 9)" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+function openMenu(){
+  $('#art-full').innerHTML=surveyArt('full');$('#art-quick').innerHTML=surveyArt('quick');
+  document.querySelectorAll('.mode-tg .pips').forEach(el=>{el.innerHTML=HOLLOW.repeat(4);});
+  $('#o-menu').hidden=false;document.body.classList.add('menu');requestAnimationFrame(()=>$('#mn-full').focus({preventScroll:true}));
+}
+function closeMenu(){$('#o-menu').hidden=true;document.body.classList.remove('menu');}
+function chooseSurvey(k){S.lastInput=performance.now();PICK.survey=k;openLogin(k==='quick'?'judge':'visitor');}
+$('#mn-full').addEventListener('click',()=>chooseSurvey('full'));
+$('#mn-quick').addEventListener('click',()=>chooseSurvey('quick'));
+$('#mn-lang').addEventListener('click',()=>{S.lastInput=performance.now();$('#b-lang').click();});
+/* back from the entry gate to the menu; no session was opened yet */
+$('#b-lg-back').addEventListener('click',()=>{S.lastInput=performance.now();$('#o-login').hidden=true;S.mode='attract';openMenu();});
+
+/* how to play: three steps and the controls; the mission waits while it is open */
+let howResume=false,homeResume=false;
+function renderHow(){
+  const el=$('#how-keys');if(!el)return;
+  el.innerHTML=TOUCH?'<p>'+t('b_touch')+'</p>':
+    '<span><kbd>←</kbd><kbd>→</kbd>'+t('k_steer')+'</span><span><kbd>↑</kbd><kbd>↓</kbd>'+t('k_speed')+'</span><span><kbd>'+t('k_space')+'</kbd>'+t('k_auto')+'</span><span><kbd>C</kbd>'+t('k_cam')+'</span><span>'+t('k_drag')+'</span>';
+}
+function openHow(){S.lastInput=performance.now();if(S.mode==='play'&&!S.paused){S.paused=true;releaseKeys();howResume=true;}renderHow();$('#o-how').hidden=false;$('#how-ok').focus({preventScroll:true});}
+function closeHow(){$('#o-how').hidden=true;S.lastInput=performance.now();if(howResume){howResume=false;S.paused=false;}if(!$('#o-menu').hidden)$('#mn-how').focus({preventScroll:true});}
+$('#how-ok').addEventListener('click',closeHow);
+['#b-help','#mn-help','#mn-how'].forEach(s=>$(s).addEventListener('click',openHow));
+
+/* home: back to the main menu; during a mission it asks first, because the mission ends */
+function homeAsk(){S.lastInput=performance.now();if(S.mode!=='play'){toAttract();return;}
+  if(!S.paused){S.paused=true;releaseKeys();homeResume=true;}$('#o-home').hidden=false;$('#home-stay').focus({preventScroll:true});}
+function homeStay(){$('#o-home').hidden=true;S.lastInput=performance.now();if(homeResume){homeResume=false;S.paused=false;}}
+$('#b-home').addEventListener('click',homeAsk);
+$('#home-stay').addEventListener('click',homeStay);
+$('#home-go').addEventListener('click',()=>{homeResume=false;toAttract();});
 $('#b-again').addEventListener('click',()=>{$('#o-res').hidden=true;openBrief();});
 $('#b-rate').addEventListener('click',()=>openFeedback('results'));
 $('#b-side').addEventListener('click',()=>{if(S.mode==='play'&&!S.paused)openFeedback('play');});
@@ -564,7 +652,7 @@ function openSession(visitor,role){
   tourDone=false;/* each new visitor gets the tour once */
   const now=new Date();
   sess={id:now.getTime().toString(36)+Math.random().toString(36).slice(2,6),visitor,role,stars:0,review:'',start:stamp(now),end:'',duration_s:0,
-    missions:0,score:'',coverage:'',correct:'',mine:'',wreck:'',unknown:'',fish:'',time_mode:'',device:TOUCH?'tablet':'pc',lang,status:'open',t0:now.getTime(),t1:now.getTime(),synced:false};
+    missions:0,survey:PICK.survey,score:'',coverage:'',correct:'',mine:'',wreck:'',unknown:'',fish:'',time_mode:'',device:TOUCH?'tablet':'pc',lang,status:'open',t0:now.getTime(),t1:now.getTime(),synced:false};
   putSession(sess);
 }
 function noteMission(){
@@ -580,7 +668,7 @@ function closeSession(status){
 /* a session left open by a closed tab or a reload is closed at its last activity */
 (()=>{const a=sessions();let ch=false;a.forEach(r=>{if(r.status==='open'){const t1=r.t1||r.t0;Object.assign(r,{status:'left',end:stamp(new Date(t1)),duration_s:Math.round((t1-r.t0)/1000)});ch=true;}});if(ch)store.set(SESS,a);})();
 /* what the sheet, the admin table and the CSV show: readable Arabic values, one column per field */
-const LBL={role:{visitor:'زائر',judge:'محكّم'},status:{rated:'قيّم',partial:'اختار النجوم ولم يرسل',skipped:'تخطّى التقييم',left:'غادر بدون تقييم',open:'جلسة جارية'},
+const LBL={survey:{full:'مسح كامل',quick:'مسح سريع'},role:{visitor:'زائر',judge:'محكّم'},status:{rated:'قيّم',partial:'اختار النجوم ولم يرسل',skipped:'تخطّى التقييم',left:'غادر بدون تقييم',open:'جلسة جارية'},
   dec:{hand:'تسليم للتحقق',clear:'غير خطِر',none:'بلا قرار',miss:'لم يُرصد'},device:{pc:'كمبيوتر',tablet:'تابلت'},lang:{ar:'عربي',en:'English'}};
 const COLS=[['id','المعرّف'],['visitor','الآيدي'],['role','الصفة'],['stars','التقييم (من 5)'],['review','الملاحظة'],['start','البداية'],['end','النهاية'],['duration_s','المدة (ثانية)'],
   ['missions','عدد المهمات'],['score','النقاط'],['coverage','التغطية %'],['correct','قرارات صحيحة (من 4)'],['mine','اللغم المربوط'],['wreck','الحطام'],['unknown','الجسم غير المعروف'],['fish','الأسماك'],
@@ -590,7 +678,8 @@ function human(r){
   COLS.forEach(([k])=>{let v=r[k];if(v==null)v='';
     if(k==='role'||k==='status'||k==='device'||k==='lang')v=LBL[k][v]||v;
     else if(k==='mine'||k==='wreck'||k==='unknown'||k==='fish')v=LBL.dec[v]||v;
-    else if(k==='time_mode')v=v==='free'?'حتى يكتمل المسح':(/^\d+$/.test(String(v))?v+' دقائق':v);
+    else if(k==='time_mode'){const d=v==='free'?'حتى يكتمل':(/^\d+$/.test(String(v))?v+' دقائق':v),sv=r.survey?LBL.survey[r.survey]||'':'';
+      v=[sv,d].filter(Boolean).join('، ')+(BETA&&sv?' (تجريبي)':'');}
     else if(k==='stars'&&!v)v='';
     o[k]=v;});
   return o;
@@ -719,7 +808,7 @@ function renderAdmin(msg){
     '<div><span>القرارات الصحيحة</span><b class="n">'+(corr.length?(corr.reduce((s,x)=>s+x,0)/corr.length).toFixed(1)+'/4':'—')+'</b><small>متوسط من أكمل مهمة</small></div>';
   const cnt=[5,4,3,2,1].map(s=>[s,rated.filter(r=>Math.round(+r.stars)===s).length]);
   $('#ad-dist').innerHTML=cnt.map(([s,n])=>'<div class="r"><span class="st">'+'★'.repeat(s)+'</span><span class="bar"><i style="width:'+(rated.length?n/rated.length*100:0).toFixed(1)+'%"></i></span><span class="n">'+n+(rated.length?' ('+Math.round(n/rated.length*100)+'%)':'')+'</span></div>').join('');
-  $('#ad-rows').innerHTML=L.map(r=>'<tr><td><bdi>'+escH(r.visitor)+'</bdi></td><td>'+escH(r.role)+'</td><td class="st" aria-label="'+(+r.stars||0)+' من 5">'+starsTxt(r.stars)+'</td><td class="rv">'+escH(r.review)+'</td><td class="n">'+escH(r.start)+'</td><td class="n">'+(r.duration_s?fmt(+r.duration_s):'—')+'</td><td class="n">'+escH(r.score)+'</td><td class="n">'+(r.correct!==''&&r.correct!=null?escH(r.correct)+'/4':'—')+'</td><td>'+escH(r.status)+'</td><td>'+escH(r._where||'')+'</td></tr>').join('');
+  $('#ad-rows').innerHTML=L.map(r=>'<tr><td><bdi>'+escH(r.visitor)+'</bdi></td><td>'+escH(r.role)+'</td><td>'+escH(r.time_mode)+'</td><td class="st" aria-label="'+(+r.stars||0)+' من 5">'+starsTxt(r.stars)+'</td><td class="rv">'+escH(r.review)+'</td><td class="n">'+escH(r.start)+'</td><td class="n">'+(r.duration_s?fmt(+r.duration_s):'—')+'</td><td class="n">'+escH(r.score)+'</td><td class="n">'+(r.correct!==''&&r.correct!=null?escH(r.correct)+'/4':'—')+'</td><td>'+escH(r.status)+'</td><td>'+escH(r._where||'')+'</td></tr>').join('');
   $('#ad-empty').hidden=L.length>0;
 }
 function csvCell(v){v=v==null?'':String(v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';}
@@ -754,7 +843,7 @@ $('#ad-sync').addEventListener('click',async()=>{
   loadAdmin();
 });
 $('#ad-pin').addEventListener('click',()=>showPin('change'));
-$('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.'))store.set('b01sim.best',[]);});
+$('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.')){store.set('b01sim.best',[]);store.set('b01sim.best.quick',[]);}});
 $('#ad-wipe').addEventListener('click',()=>{
   const a=sessions().filter(r=>r.status!=='open'),pend=a.filter(r=>!r.synced).length;
   if(!confirm('حذف '+nS(a.length)+' محفوظة على هذا الجهاز؟'+(pend?' منها '+pend+' لم تُرسل إلى Google Sheets وستضيع.':' كلها في Google Sheets وتبقى هناك.')+' لا يمكن التراجع.'))return;
@@ -765,7 +854,7 @@ $('#ad-wipe').addEventListener('click',()=>{
 function renderTimeSel(){
   $('#t-free').setAttribute('aria-pressed',String(timeSel.free));$('#t-set').setAttribute('aria-pressed',String(!timeSel.free));
   $('#t-step').hidden=timeSel.free;$('#t-val').textContent=mins(timeSel.min);
-  $('#t-note').textContent=timeSel.free?t('t_note_free').replace('{n}',mins(Math.round(ROUTE_S/60))):t('t_note_limit');
+  $('#t-note').textContent=!timeSel.free?t('t_note_limit'):PICK.survey==='quick'?t('t_note_quick'):t('t_note_free').replace('{n}',mins(Math.round(SURVEYS.full.routeS/60)));
 }
 const setTime=p=>{Object.assign(timeSel,p);store.set('b01sim.tlim',timeSel);renderTimeSel();};
 $('#t-free').addEventListener('click',()=>setTime({free:true}));
@@ -832,6 +921,8 @@ function planCross(tg){
   const ux=(E2[0]-E1[0])/(2*D),uy=(E2[1]-E1[1])/(2*D),side=((bt.x-E1[0])*uy-(bt.y-E1[1])*ux)>=0?1:-1;
   const wide=[E1[0]+uy*side*36,E1[1]-ux*side*36];
   const resume=[bt.x-Math.sin(bt.h)*45,bt.y-Math.cos(bt.h)*45];/* rejoin far enough back to be straight again where the line was left */
+  /* the quick square: on autopilot, pass B runs over every point of it, so a target first seen on pass A needs no detour */
+  tg.viaB=SURVEY==='quick'&&S.auto&&!S.goal&&tg.obs[0].axis===1&&S.wp<2*NA+2;if(tg.viaB)return;
   S.queue=[wide,E1,E2,resume];S.legFrom=[bt.x,bt.y];S.routeDone=false;S.goal=null;
 }
 $('#d-hand').addEventListener('click',()=>decide('hand'));
@@ -859,13 +950,13 @@ function observe(tg,axis,across,px,py){
 function autoDecide(tg){
   const e=ev(tg),K=tg.kind,moveKnown=!!e.rows[4][1];
   const kind=!tg.crossed&&!e.cons&&((K==='mine'&&e.conf<80)||(K==='fish'&&!moveKnown))?'cross':(K==='fish'&&moveKnown?'clear':'hand');
-  const prev=S.cur;S.cur=tg;decide(kind);S.cur=prev;aiNote(tg,kind);
+  const prev=S.cur;S.cur=tg;decide(kind);S.cur=prev;aiNote(tg,kind);if(!S.tg.some(x=>x.state==='cross'))crossGuide.visible=false;
   FX.flashT=1.3;FX.bigPing=true;const bd=document.body;bd.classList.remove('det');void bd.offsetWidth;bd.classList.add('det');setTimeout(()=>bd.classList.remove('det'),1400);
 }
 /* a small card per AI decision, newest on top; a click opens the target's evidence */
 function aiNote(tg,kind){
   const box=$('#ai-notes'),e=ev(tg),d=document.createElement('button');d.type='button';d.className='ai-note plate';
-  d.innerHTML='<span class="ai-h"><span class="lvl lv-'+e.lv+'">'+t('lv_'+e.lv)+'</span><span class="tid n">'+tg.id+'</span></span><b>'+t('k_'+tg.kind)+'</b><span>'+t('ai_'+kind)+'</span><small>'+t('ai_conf').replace('{c}',e.conf)+'</small>';
+  d.innerHTML='<span class="ai-h"><span class="lvl lv-'+e.lv+'">'+t('lv_'+e.lv)+'</span><span class="tid n">'+tg.id+'</span></span><b>'+t('k_'+tg.kind)+'</b><span>'+t(kind==='cross'&&tg.viaB?'ai_crossB':'ai_'+kind)+'</span><small>'+t('ai_conf').replace('{c}',e.conf)+'</small>';
   d.addEventListener('click',()=>{if(S.mode==='play'&&!S.paused)openTargetFile(tg);});
   box.prepend(d);while(box.children.length>3)box.lastChild.remove();
   setTimeout(()=>{d.classList.add('out');setTimeout(()=>d.remove(),450);},8000);
@@ -874,7 +965,7 @@ function aiNote(tg,kind){
 function endMission(){
   S.paused=true;S.mode='results';S.lastInput=performance.now();calcCov();
   const covPct=Math.round(S.covPct*100),ok=S.tg.filter(x=>x.dec&&x.dec===GOOD[x.kind]).length,total=Math.max(0,Math.round(S.score+covPct*3));
-  const best=store.get('b01sim.best',[]);const me={s:total,c:covPct,d:Date.now(),n:S.visitor||''};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set('b01sim.best',top);
+  const BK='b01sim.best'+(SURVEY==='quick'?'.quick':''),best=store.get(BK,[]);const me={s:total,c:covPct,d:Date.now(),n:S.visitor||''};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set(BK,top);
   S.result={total,covPct,ok,real:S.real,top,me:me.d};noteMission();
   renderResults();$('#o-res').hidden=false;$('#b-rate').focus();showControls();updateHud(true);
 }
@@ -1203,7 +1294,7 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
+window.__b01={S,decide,startPlay,toAttract,openBrief,setSurvey,SURVEYS,PICK,openMenu,chooseSurvey,openHow,homeAsk,get survey(){return SURVEY;},get route(){return S.route;},ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
   get wake(){const c=wkGeo.attributes.color.array;return {n:wakePts.length,count:wkGeo.drawRange.count,alpha:[3,7,11,15,35,39,43,47,203,207].map(i=>+c[i].toFixed(2))};},
   phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
