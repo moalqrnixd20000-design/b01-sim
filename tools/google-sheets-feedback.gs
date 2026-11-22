@@ -61,7 +61,7 @@ function doPost(e) {
   if (body.action === 'list') return body.key === SECRET ? list_() : json_({ ok: false, error: 'unauthorized' });
   if (body.key !== SECRET && body.key !== WRITE_KEY) return json_({ ok: false, error: 'unauthorized' });
   const recs = (Array.isArray(body.records) ? body.records : []).slice(0, 50).filter(valid_);
-  return save_(recs);
+  return save_(recs, body.key === SECRET);
 }
 
 /* only well-formed sessions are saved */
@@ -78,8 +78,9 @@ function doGet() {
   return json_({ ok: false, error: 'use POST' });
 }
 
-/* save sessions: a session already in the sheet (same id) is updated, a new one is added */
-function save_(records) {
+/* save sessions: a new id is added. With the public send key an existing row is never changed
+   (a repeated send is just acknowledged); only the admin key can update a row. */
+function save_(records, canUpdate) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -91,7 +92,7 @@ function save_(records) {
       if (!r || !r.id) return;
       const row = COLS.map(c => (c[0] === 'saved_at' ? new Date() : clean_(r[c[0]])));
       const i = ids.indexOf(String(r.id));
-      if (i >= 0) sh.getRange(i + 2, 1, 1, COLS.length).setValues([row]);
+      if (i >= 0) { if (canUpdate) sh.getRange(i + 2, 1, 1, COLS.length).setValues([row]); }
       else { sh.appendRow(row); ids.push(String(r.id)); }
       saved.push(String(r.id));
     });
