@@ -546,12 +546,16 @@ function human(r){
     o[k]=v;});
   return o;
 }
-const sheetCfg=()=>store.get(SHEET,{url:'',key:''});
+/* every device sends to the team sheet with the public send key (it can only add sessions);
+   reading needs the admin key, entered only in the hidden panel on the team's own devices */
+const SHEET_URL='https://script.google.com/macros/s/AKfycbygQwCYxFhDJthPwkQnmr_ywa97IVpJ7if4MJ-CQ1DuWOEe24Y2E1aC5HkfwEDHqEziYg/exec',WRITE_KEY='w-0gKSqgbwPrBcQmp2xI9';
+const sheetCfg=()=>{const c=store.get(SHEET,{url:'',key:''});return {url:c.url||SHEET_URL,key:c.key||''};};
+const sendCfg=()=>{const c=sheetCfg();return {url:c.url,key:c.key||WRITE_KEY};};
 let syncing=false,syncT=0;
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(syncNow,600);}
 /* outbox: every closed session not yet in the sheet goes in one request; a lost answer only means it is sent again (the sheet updates by id) */
 async function syncNow(){
-  const c=sheetCfg();if(!c.url||!c.key)return {ok:false,msg:'not-set'};if(!navigator.onLine)return {ok:false,msg:'offline'};if(syncing)return {ok:false,msg:'busy'};
+  const c=sendCfg();if(!c.url||!c.key)return {ok:false,msg:'not-set'};if(!navigator.onLine)return {ok:false,msg:'offline'};if(syncing)return {ok:false,msg:'busy'};
   const pend=sessions().filter(r=>r.status!=='open'&&!r.synced);if(!pend.length)return {ok:true,sent:0};
   syncing=true;
   try{
@@ -634,7 +638,7 @@ const sheetGet=c=>fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain
 async function loadAdmin(){
   $('#ad-src-local').setAttribute('aria-pressed',String(AD.src==='local'));$('#ad-src-all').setAttribute('aria-pressed',String(AD.src==='all'));
   if(AD.src==='local'){AD.list=sessions().slice().reverse().map(r=>Object.assign(human(r),{_where:r.status==='open'?'—':r.synced?'في الجدول':'على الجهاز فقط'}));renderAdmin();return;}
-  const c=sheetCfg();if(!c.url||!c.key){AD.list=[];renderAdmin('اربط Google Sheets من الإعدادات تحت أولًا.');return;}
+  const c=sheetCfg();if(!c.key){AD.list=[];renderAdmin('أدخل مفتاح الإدارة في الإعدادات تحت عشان تقرأ كل الأجهزة.');return;}
   AD.list=[];renderAdmin('جارٍ التحميل من Google Sheets…');
   try{
     const j=await sheetGet(c);if(!j.ok)throw new Error(j.error||'');
@@ -652,7 +656,7 @@ function renderAdmin(msg){
   const judges=rated.filter(r=>r.role==='محكّم'),visitors=rated.filter(r=>r.role!=='محكّم');
   const durs=L.map(r=>+r.duration_s||0).filter(Boolean),corr=L.filter(r=>r.correct!==''&&r.correct!=null&&!isNaN(+r.correct)).map(r=>+r.correct);
   const pending=sessions().filter(r=>r.status!=='open'&&!r.synced).length,c=sheetCfg(),a=avg(rated);
-  $('#ad-status').textContent=(c.url&&c.key?'Google Sheets مرتبط.':'Google Sheets غير مرتبط، والبيانات محفوظة على هذا الجهاز فقط.')+(pending?' '+pending+' جلسة بانتظار الإرسال.':'')+(msg?' '+msg:'');
+  $('#ad-status').textContent='الإرسال إلى Google Sheets مفعّل من كل الأجهزة.'+(c.key?' مفتاح الإدارة محفوظ على هذا الجهاز.':' مفتاح الإدارة غير محفوظ هنا، فالقراءة من الجدول مقفلة.')+(pending?' '+pending+' جلسة بانتظار الإرسال.':'')+(msg?' '+msg:'');
   const mini=n=>'<span class="mini" aria-hidden="true">'+[1,2,3,4,5].map(i=>'<svg viewBox="0 0 24 24" class="'+(i<=Math.round(n)?'on':'')+'"><path d="M12 2.8l2.85 5.95 6.5.85-4.75 4.5 1.2 6.45L12 17.4l-5.8 3.15 1.2-6.45L2.65 9.6l6.5-.85z"/></svg>').join('')+'</span>';
   const fmtAvg=x=>x?x.toFixed(1):'—';
   $('#ad-sum').innerHTML=
@@ -679,9 +683,10 @@ $('#ad-src-all').addEventListener('click',()=>{AD.src='all';loadAdmin();});
 $('#ad-csv').addEventListener('click',exportCsv);
 $('#ad-close').addEventListener('click',closeAdmin);
 $('#ad-save').addEventListener('click',async()=>{
-  const url=$('#ad-url').value.trim(),key=$('#ad-key').value.trim(),m=$('#ad-set-msg');
+  let url=$('#ad-url').value.trim();const key=$('#ad-key').value.trim(),m=$('#ad-set-msg');
   if(url&&!/^https:\/\//.test(url)){m.textContent='الرابط لازم يبدأ بـ https://';return;}
-  store.set(SHEET,{url,key});if(!url||!key){m.textContent='انحفظ. Google Sheets غير مرتبط على هذا الجهاز.';loadAdmin();return;}
+  store.set(SHEET,{url:url===SHEET_URL?'':url,key});if(!key){m.textContent='انحفظ. الإرسال شغّال، لكن القراءة تحتاج مفتاح الإدارة.';loadAdmin();return;}
+  url=url||SHEET_URL;
   m.textContent='جارٍ اختبار الاتصال…';
   try{const j=await sheetGet({url,key});
     if(!j.ok){m.textContent='الرابط يرد، لكن المفتاح غير صحيح.';return;}

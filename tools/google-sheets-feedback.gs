@@ -10,7 +10,8 @@
    "Anyone" can reach the URL, but nothing is saved or returned without the SECRET.
    After editing this script later: Deploy > Manage deployments > edit > New version. */
 
-const SECRET = 'CHANGE-THIS-SECRET';
+const SECRET = 'CHANGE-THIS-SECRET';     /* admin key: read and write; keep it private */
+const WRITE_KEY = 'w-0gKSqgbwPrBcQmp2xI9'; /* public send key, also in the simulator's code: it can only add sessions */
 const SHEET_NAME = 'التقييمات';
 
 /* the simulator sends these fields; the second value is the column header in the sheet */
@@ -56,9 +57,20 @@ function clean_(v) {
 function doPost(e) {
   let body;
   try { body = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad request' }); }
-  if (!body || body.key !== SECRET) return json_({ ok: false, error: 'unauthorized' });
-  if (body.action === 'list') return list_();
-  return save_(Array.isArray(body.records) ? body.records : []);
+  if (!body) return json_({ ok: false, error: 'bad request' });
+  if (body.action === 'list') return body.key === SECRET ? list_() : json_({ ok: false, error: 'unauthorized' });
+  if (body.key !== SECRET && body.key !== WRITE_KEY) return json_({ ok: false, error: 'unauthorized' });
+  const recs = (Array.isArray(body.records) ? body.records : []).slice(0, 50).filter(valid_);
+  return save_(recs);
+}
+
+/* only well-formed sessions are saved */
+function valid_(r) {
+  if (!r || typeof r.id !== 'string' || !/^[a-z0-9]{6,20}$/.test(r.id)) return false;
+  const s = r.stars === '' || r.stars === undefined ? 0 : Number(r.stars);
+  if (!(s >= 0 && s <= 5)) return false;
+  ['visitor', 'review'].forEach(k => { if (typeof r[k] === 'string') r[k] = r[k].slice(0, k === 'review' ? 600 : 24); });
+  return true;
 }
 
 /* opening the link in a browser shows nothing but this */
