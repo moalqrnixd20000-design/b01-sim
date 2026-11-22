@@ -132,7 +132,64 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .res span{display:block;font-size:12px;color:var(--fg-3)}
 .res .n{font-size:22px;font-weight:700}
 .best{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--fg-2)}
-.best li{display:grid;grid-template-columns:2.5em minmax(0,1fr) 5em;background:var(--abyss);padding:5px 10px}
+.best li{display:grid;grid-template-columns:2.2em minmax(0,1fr) 5em 4.5em;gap:6px;background:var(--abyss);padding:5px 10px}
+.best li>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.vchip{font-size:13px;color:var(--fg-2)}
+/* visitor sign-in and feedback */
+.login{width:min(520px,100%)}
+.fbk{width:min(620px,100%)}
+.fld{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--fg-2)}
+.field{font:inherit;color:var(--fg);background:var(--abyss);border:0;border-radius:0;box-shadow:inset 0 0 0 1px var(--chine-2);padding:12px 14px;user-select:text;-webkit-user-select:text;touch-action:manipulation}
+.field:focus{outline:2px solid var(--sea-hi);outline-offset:0}
+#v-id{font-size:22px;text-align:center}
+textarea.field{font-size:16px;line-height:1.7;resize:none}
+.card small.note{font-size:12.5px;color:var(--fg-3)}
+.card small.note.err{color:var(--target)}
+.row small.note{align-self:center}
+.field.ltr{direction:ltr;text-align:left;font-size:15px}
+/* stars: the caution amber of the console, the one warm colour on the card */
+.stars{display:flex;justify-content:center;gap:4px;padding-top:4px}
+.star{width:60px;height:60px;display:grid;place-items:center;color:var(--chine-2)}
+.star svg{width:48px;height:48px;fill:currentColor;transition:transform .12s ease,color .12s ease}
+.star.on{color:var(--caution)}
+.star:hover svg{transform:scale(1.08)}
+.card .star-l{margin:0;min-height:1.7em;text-align:center;font-size:16px;font-weight:600;color:var(--caution)}
+/* side button: rate and finish the session early */
+.side-rate{position:fixed;left:max(12px,env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%);z-index:3;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--veil);font-size:13.5px;box-shadow:inset 0 0 0 1px var(--chine-2)}
+.side-rate svg{width:18px;height:18px;fill:var(--caution)}
+.side-rate:hover{background:var(--facet)}
+/* hidden admin panel */
+.admin-ov{z-index:8;background:rgba(8,17,29,.82)}
+.pin-ov{z-index:9}
+.admin{width:min(1180px,100%);max-height:calc(100% - 12px);gap:12px}
+.ad-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ad-head h3{flex:1 1 auto}
+.card .ad-status{font-size:13px}
+.ad-sum{display:grid;grid-template-columns:minmax(210px,1.4fr) repeat(4,minmax(0,1fr));gap:8px}
+.ad-sum>div{background:var(--abyss);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.ad-sum span{font-size:12px;color:var(--fg-3)}
+.ad-sum b{font-size:24px;font-weight:700}
+.ad-sum small{font-size:12px;color:var(--fg-3)}
+.ad-avg b{font-size:46px;line-height:1;color:var(--caution)}
+.ad-avg .mini{display:flex;gap:2px}
+.ad-avg .mini svg{width:18px;height:18px;fill:var(--chine-2)}
+.ad-avg .mini svg.on{fill:var(--caution)}
+.ad-dist{display:flex;flex-direction:column;gap:5px;background:var(--abyss);padding:12px 14px}
+.ad-dist .r{display:grid;grid-template-columns:5.5em minmax(0,1fr) 6em;gap:10px;align-items:center;font-size:13px;color:var(--fg-2)}
+.ad-dist .bar{height:10px;background:var(--facet)}
+.ad-dist .bar i{display:block;height:100%;background:var(--caution)}
+.st{color:var(--caution);white-space:nowrap;letter-spacing:1px}
+.ad-tw{overflow:auto;max-height:44vh;background:var(--abyss)}
+.ad-t{width:100%;border-collapse:collapse;font-size:13px}
+.ad-t th{position:sticky;top:0;background:var(--facet);color:var(--fg-2);font-weight:500;text-align:start;padding:8px 10px;white-space:nowrap}
+.ad-t td{padding:7px 10px;border-top:1px solid var(--chine);vertical-align:top;white-space:nowrap}
+.ad-t td.rv{white-space:normal;min-width:220px;max-width:360px;line-height:1.6}
+.ad-set{background:var(--abyss);padding:12px 14px}
+.ad-set summary{cursor:pointer;color:var(--fg);font-size:14px}
+.ad-set>*+*{margin-top:10px}
+@media (max-width:900px){.ad-sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.star svg{transition:none}}
 .best li>span:last-child{text-align:end}
 .best li.hd{background:transparent;padding-block:0;font-size:12px;color:var(--fg-3)}
 .best li.me{color:var(--sea-hi)}
@@ -189,6 +246,20 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <button class="tbtn plate" data-k="down" aria-label="أبطأ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9 L12 16 L19 9" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button>
 </div>
 <p class="hint plate" id="hint" hidden data-t="keys">الأسهم للقيادة، المسافة للطيار الآلي، C للكاميرا</p>
+<button class="side-rate plate" id="b-side" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.85 5.95 6.5.85-4.75 4.5 1.2 6.45L12 17.4l-5.8 3.15 1.2-6.45L2.65 9.6l6.5-.85z"/></svg><span data-t="side">قيّم وأنهِ الجلسة</span></button>
+
+<!-- visitor sign-in: any number or name, no password -->
+<div class="overlay" id="o-login" hidden>
+  <div class="card plate login" role="dialog" aria-labelledby="lg-t">
+    <h3 id="lg-t" data-t="lg_title">أهلًا بك في محاكي B01</h3>
+    <p data-t="lg_body"></p>
+    <div class="seg" role="group" aria-labelledby="lg-t"><button class="segb plate" id="r-vis" aria-pressed="true" data-t="role_visitor">زائر</button><button class="segb plate" id="r-judge" aria-pressed="false" data-t="role_judge">محكّم</button></div>
+    <label class="fld"><span id="lg-lab">رقم الزائر أو الاسم</span>
+      <input id="v-id" class="field" type="text" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"></label>
+    <small class="note" id="lg-note"></small>
+    <div class="row"><button class="cta" id="b-login" data-t="lg_go">ادخل</button></div>
+  </div>
+</div>
 
 <!-- briefing -->
 <div class="overlay" id="o-brief" hidden>
@@ -241,7 +312,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 <!-- results -->
 <div class="overlay" id="o-res" hidden>
   <div class="card plate" role="dialog" aria-labelledby="r-t">
-    <h3 id="r-t" data-t="r_title">انتهت المهمة</h3>
+    <div class="rhead"><h3 id="r-t" data-t="r_title">انتهت المهمة</h3><span class="vchip" id="r-who"></span></div>
     <div class="res">
       <div><span data-t="score">النقاط</span><b class="n" id="r-score">0</b></div>
       <div><span data-t="cov">التغطية</span><b class="n" id="r-cov">0%</b></div>
@@ -251,7 +322,59 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <ul class="tl" id="r-tg"></ul>
     <p data-t="r_best" style="color:var(--fg)">أفضل النتائج</p>
     <ol class="best" id="r-best"></ol>
-    <div class="row"><button class="cta" id="b-again" data-t="again">العب مرة ثانية</button></div>
+    <div class="row"><button class="cta" id="b-rate" data-t="rate">قيّم تجربتك</button><button class="cta alt" id="b-again" data-t="again">العب مرة ثانية</button></div>
+  </div>
+</div>
+
+<!-- feedback after the mission -->
+<div class="overlay" id="o-fb" hidden>
+  <div class="card plate fbk" role="dialog" aria-labelledby="fb-t">
+    <h3 id="fb-t" data-t="fb_title">قيّم تجربتك مع B01</h3>
+    <div class="stars" id="fb-stars" role="radiogroup" aria-labelledby="fb-t"></div>
+    <p class="star-l" id="fb-star-l" aria-live="polite"></p>
+    <label class="fld"><span data-t="fb_note">ملاحظتك (اختياري)</span><textarea id="fb-text" class="field" rows="3" maxlength="600"></textarea></label>
+    <div class="row"><button class="cta" id="fb-send" data-t="fb_send" disabled>أرسل التقييم</button><button class="cta alt" id="fb-back" data-t="fb_back" hidden>رجوع للمهمة</button><button class="cta danger" id="fb-skip" data-t="fb_skip">تخطي</button><small class="note" id="fb-hint" data-t="fb_need"></small></div>
+  </div>
+</div>
+<div class="overlay" id="o-thanks" hidden>
+  <div class="card plate login" role="dialog" aria-labelledby="th-t">
+    <h3 id="th-t" data-t="th_title">شكرًا لك</h3>
+    <p data-t="th_body"></p>
+    <div class="row"><button class="cta" id="th-done" data-t="th_done">تم</button></div>
+  </div>
+</div>
+
+<!-- hidden admin: Ctrl+Shift+D, then the passcode. Arabic only: it is for the team. -->
+<div class="overlay admin-ov pin-ov" id="o-pin" hidden dir="rtl" lang="ar">
+  <div class="card plate login" role="dialog" aria-modal="true" aria-labelledby="pin-t">
+    <h3 id="pin-t">دخول الإدارة</h3>
+    <p id="pin-msg"></p>
+    <input id="pin-1" class="field ltr" type="password" autocomplete="off" aria-label="رمز الدخول">
+    <input id="pin-2" class="field ltr" type="password" autocomplete="off" aria-label="تأكيد الرمز" hidden>
+    <small class="note err" id="pin-err" aria-live="assertive"></small>
+    <div class="row"><button class="cta" id="pin-go">دخول</button><button class="cta danger" id="pin-x">إلغاء</button></div>
+  </div>
+</div>
+<div class="overlay admin-ov" id="o-admin" hidden dir="rtl" lang="ar">
+  <div class="card plate admin" role="dialog" aria-modal="true" aria-labelledby="ad-t">
+    <div class="ad-head">
+      <h3 id="ad-t">لوحة الإدارة</h3>
+      <div class="seg" role="group" aria-label="مصدر البيانات"><button class="segb plate" id="ad-src-local" aria-pressed="true">هذا الجهاز</button><button class="segb plate" id="ad-src-all" aria-pressed="false">كل الأجهزة (Google Sheets)</button></div>
+      <button class="cta" id="ad-csv">تصدير CSV</button>
+      <button class="cta alt" id="ad-close">إغلاق</button>
+    </div>
+    <p class="ad-status" id="ad-status" aria-live="polite"></p>
+    <section class="ad-sum" id="ad-sum" aria-label="ملخص التقييمات"></section>
+    <section class="ad-dist" id="ad-dist" aria-label="توزيع النجوم"></section>
+    <div class="ad-tw"><table class="ad-t"><thead><tr><th>الآيدي</th><th>الصفة</th><th>التقييم</th><th>الملاحظة</th><th>البداية</th><th>المدة</th><th>النقاط</th><th>قرارات صحيحة</th><th>الحالة</th><th>مكان الحفظ</th></tr></thead><tbody id="ad-rows"></tbody></table></div>
+    <p id="ad-empty" hidden>ما فيه جلسات مسجّلة للحين.</p>
+    <details class="ad-set"><summary>الإعدادات وربط Google Sheets</summary>
+      <label class="fld"><span>رابط Google Sheets (Web app URL)</span><input id="ad-url" class="field ltr" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <label class="fld"><span>المفتاح السري (نفس SECRET في السكربت)</span><input id="ad-key" class="field ltr" type="password" autocomplete="off"></label>
+      <div class="row"><button class="cta alt" id="ad-save">حفظ واختبار الاتصال</button><button class="cta alt" id="ad-sync">إرسال المحفوظ الآن</button></div>
+      <small class="note" id="ad-set-msg" aria-live="polite"></small>
+      <div class="row"><button class="cta danger" id="ad-pin">تغيير رمز الدخول</button><button class="cta danger" id="ad-best">تصفير لوحة أفضل النتائج</button><button class="cta danger" id="ad-wipe">حذف بيانات هذا الجهاز</button></div>
+    </details>
   </div>
 </div>
 

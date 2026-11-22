@@ -44,7 +44,13 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  fb_fish_clear:'صحيح: أصداء تتحرك بحرية في عمود الماء، حياة بحرية غير خطرة.',fb_fish_hand:'الأدلة تشير إلى حياة بحرية، وإحالتها تشغل فريق التحقق بلا حاجة.',
  fb_cross:'أُضيفت تمريرة متقاطعة على الخريطة. الطيار الآلي يمر فوق الهدف من الاتجاه الآخر، أو قُدها بنفسك.',
  r_title:'انتهت المهمة',r_ok:'قرارات صحيحة',r_time:'الزمن',r_best:'أفضل النتائج',again:'العب مرة ثانية',r_right:'صحيح',r_wrong:'غير صحيح',
- dec_hand:'سُلّم للتحقق',dec_clear:'غير خطِر',dec_none:'بلا قرار',dec_miss:'لم يُرصد'},
+ dec_hand:'سُلّم للتحقق',dec_clear:'غير خطِر',dec_none:'بلا قرار',dec_miss:'لم يُرصد',
+ lg_title:'أهلًا بك في محاكي B01',lg_body:'اختر صفتك واكتب رقمك، عشان نحفظ نتيجتك وتقييمك.',role_visitor:'زائر',role_judge:'محكّم',
+ lg_label_v:'رقم الزائر أو الاسم',lg_label_j:'رقم المحكّم (ID)',lg_ph:'مثلًا {n}',lg_ph_j:'مثلًا J-07',lg_auto:'تقدر تتركه فاضي وناخذ لك الرقم {n}.',lg_need_j:'اكتب رقم المحكّم.',lg_go:'ادخل',
+ visitor:'الآيدي',rate:'قيّم تجربتك',side:'قيّم وأنهِ الجلسة',
+ fb_title:'قيّم تجربتك مع B01',star_n:'{n} من 5',s1:'ضعيفة',s2:'مقبولة',s3:'جيدة',s4:'ممتازة',s5:'رائعة',
+ fb_note:'ملاحظتك (اختياري)',fb_send:'أرسل التقييم',fb_skip:'تخطي',fb_back:'رجوع للمهمة',fb_need:'اختر عدد النجوم أولًا',
+ th_title:'شكرًا لك',th_body:'انحفظ تقييمك لفريق B01. اللعبة ترجع لوضع العرض للزائر اللي بعدك.',th_done:'تم'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
  press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
@@ -76,7 +82,13 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  fb_fish_clear:'Correct: echoes moving freely in the water column, non-hazardous marine life.',fb_fish_hand:'The evidence points to marine life; handing it over takes the verification team\'s time for nothing.',
  fb_cross:'Cross-pass added to the map. Autopilot runs over the target from the other heading, or drive it yourself.',
  r_title:'Mission complete',r_ok:'Correct decisions',r_time:'Time',r_best:'Best scores',again:'Play again',r_right:'Correct',r_wrong:'Not correct',
- dec_hand:'Handed over',dec_clear:'Non-hazardous',dec_none:'No decision',dec_miss:'Not detected'}};
+ dec_hand:'Handed over',dec_clear:'Non-hazardous',dec_none:'No decision',dec_miss:'Not detected',
+ lg_title:'Welcome to the B01 simulator',lg_body:'Choose who you are and type your ID so we can keep your score and rating.',role_visitor:'Visitor',role_judge:'Judge',
+ lg_label_v:'Visitor number or name',lg_label_j:'Judge ID',lg_ph:'e.g. {n}',lg_ph_j:'e.g. J-07',lg_auto:'You can leave it empty and get number {n}.',lg_need_j:'Type the judge ID.',lg_go:'Enter',
+ visitor:'ID',rate:'Rate your experience',side:'Rate and finish',
+ fb_title:'Rate your experience with B01',star_n:'{n} of 5',s1:'Poor',s2:'Fair',s3:'Good',s4:'Very good',s5:'Excellent',
+ fb_note:'Your comment (optional)',fb_send:'Send rating',fb_skip:'Skip',fb_back:'Back to the mission',fb_need:'Pick the stars first',
+ th_title:'Thank you',th_body:'Your rating is saved for the B01 team. The game now returns to the demo for the next visitor.',th_done:'Done'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
@@ -87,7 +99,7 @@ function applyLang(){
   document.querySelectorAll('[data-tl]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.tl));});
   $('#b-lang').textContent=lang==='ar'?'English':'العربية';
   $('#br-ctrl').textContent=TOUCH?t('b_touch'):t('b_keys');
-  setSimLabel();renderTimeSel();
+  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();
   if(S.mode==='attract')$('#cap-text').textContent=t('a'+(S.capIdx+1));
   if(S.cur&&!$('#o-hand').hidden)renderHand();
   if(S.mode==='results')renderResults();
@@ -342,9 +354,16 @@ function setTg3D(tg){
 }
 
 /* ---------------- input ---------------- */
-function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){openBrief();return true;}return false;}
+function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){openLogin();return true;}return false;}
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down'};
+const adminOpen=()=>!$('#o-admin').hidden||!$('#o-pin').hidden;
 addEventListener('keydown',e=>{
+  /* the hidden admin panel: Ctrl+Shift+D from any screen, then the passcode */
+  if(e.ctrlKey&&e.shiftKey&&e.code==='KeyD'){e.preventDefault();e.stopPropagation();openAdminGate();return;}
+  if(adminOpen()){if(e.key==='Escape')closeAdmin();else if(e.key==='Enter'&&e.target&&e.target.id&&e.target.id.startsWith('pin-')){e.preventDefault();pinGo();}return;}
+  /* typing in the entry or feedback fields is never a game control */
+  if(e.target&&e.target.matches&&e.target.matches('input,textarea')){S.lastInput=performance.now();if(e.target.id==='v-id'&&e.key==='Enter'){e.preventDefault();doLogin();}return;}
+  if(S.mode==='feedback'){S.lastInput=performance.now();const n=+e.key;if(n>=1&&n<=5)setStars(n);return;}
   if(anyInput())return;
   const onBtn=e.target&&e.target.closest&&e.target.closest('button');
   if(!$('#o-brief').hidden){if((e.code==='Enter'||e.code==='Space')&&!onBtn){e.preventDefault();startPlay();}return;}
@@ -354,7 +373,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyC')toggleCam();
 });
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k)press(k,0);});
-addEventListener('pointerdown',e=>{if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
+addEventListener('pointerdown',e=>{if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
 function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
 function releaseKeys(){S.keys={left:0,right:0,up:0,down:0};document.querySelectorAll('.tbtn.on').forEach(b=>b.classList.remove('on'));}
 document.querySelectorAll('.tbtn').forEach(b=>{const k=b.dataset.k;
@@ -367,13 +386,236 @@ $('#b-auto').addEventListener('click',()=>{S.lastInput=performance.now();if(S.mo
 $('#b-cam').addEventListener('click',()=>{S.lastInput=performance.now();toggleCam();});
 $('#b-lang').addEventListener('click',()=>{lang=lang==='ar'?'en':'ar';store.set('b01sim.lang',lang);applyLang();});
 
-/* ---------------- flow: attract, briefing, play, results ---------------- */
-function openBrief(){S.mode='brief';$('#caption').hidden=true;renderTimeSel();$('#o-brief').hidden=false;$('#b-start').focus();}
+/* ---------------- flow: attract, entry, briefing, play, results, rating ---------------- */
+/* entry gate: visitor or judge, any ID (no password); a visitor may leave it empty and take the next number on this device */
+const ENTRY={role:'visitor'};
+function renderLogin(){
+  const n=store.get('b01sim.nextNo',1),j=ENTRY.role==='judge',note=$('#lg-note');
+  $('#r-vis').setAttribute('aria-pressed',String(!j));$('#r-judge').setAttribute('aria-pressed',String(j));
+  $('#lg-lab').textContent=t(j?'lg_label_j':'lg_label_v');
+  $('#v-id').placeholder=j?t('lg_ph_j'):t('lg_ph').replace('{n}',n);
+  note.textContent=j?'':t('lg_auto').replace('{n}',n);note.classList.remove('err');
+}
+function openLogin(){S.mode='login';$('#caption').hidden=true;ENTRY.role='visitor';const inp=$('#v-id');inp.value='';renderLogin();$('#o-login').hidden=false;inp.focus({preventScroll:true});}
+$('#r-vis').addEventListener('click',()=>{ENTRY.role='visitor';renderLogin();$('#v-id').focus();});
+$('#r-judge').addEventListener('click',()=>{ENTRY.role='judge';renderLogin();$('#v-id').focus();});
+function doLogin(){
+  const inp=$('#v-id');let v=inp.value.trim().replace(/\s+/g,' ').slice(0,24),n=store.get('b01sim.nextNo',1);
+  if(!v){if(ENTRY.role==='judge'){const nt=$('#lg-note');nt.textContent=t('lg_need_j');nt.classList.add('err');inp.focus();return;}v=String(n);n++;}
+  else if(ENTRY.role==='visitor'&&/^\d+$/.test(v)&&+v>=n)n=+v+1;
+  store.set('b01sim.nextNo',n);S.visitor=v;inp.blur();openSession(v,ENTRY.role);openBrief();
+}
+$('#b-login').addEventListener('click',doLogin);
+function openBrief(){S.mode='brief';$('#caption').hidden=true;$('#o-login').hidden=true;renderTimeSel();$('#o-brief').hidden=false;$('#b-start').focus();showControls();}
 function startPlay(){$('#o-brief').hidden=true;resetScenario('play');S.cam='chase';showControls();updateHud(true);}
-function showControls(){const play=S.mode==='play';$('#t-steer').hidden=!(play&&TOUCH);$('#t-thr').hidden=!(play&&TOUCH);$('#hint').hidden=!(play&&!TOUCH);}
-function toAttract(){['#o-brief','#o-hand','#o-res'].forEach(s=>$(s).hidden=true);resetScenario('attract');$('#caption').hidden=false;$('#cap-text').textContent=t('a1');showControls();}
+function showControls(){const play=S.mode==='play';$('#t-steer').hidden=!(play&&TOUCH);$('#t-thr').hidden=!(play&&TOUCH);$('#hint').hidden=!(play&&!TOUCH);$('#b-side').hidden=!(play&&!!sess);}
+function toAttract(){
+  /* a visitor who walks away still leaves a session; stars picked but not sent are kept */
+  if(sess){if(S.mode==='feedback'&&FB.stars)Object.assign(sess,{stars:FB.stars,review:$('#fb-text').value.trim().slice(0,600)});closeSession(S.mode==='feedback'&&FB.stars?'partial':'left');}
+  clearTimeout(thanksTimer);['#o-login','#o-brief','#o-hand','#o-res','#o-fb','#o-thanks'].forEach(s=>$(s).hidden=true);
+  resetScenario('attract');S.visitor='';$('#caption').hidden=false;$('#cap-text').textContent=t('a1');showControls();
+}
 $('#b-start').addEventListener('click',startPlay);
 $('#b-again').addEventListener('click',()=>{$('#o-res').hidden=true;openBrief();});
+$('#b-rate').addEventListener('click',()=>openFeedback('results'));
+$('#b-side').addEventListener('click',()=>{if(S.mode==='play'&&!S.paused)openFeedback('play');});
+
+/* ---------------- exhibition log: one session per visitor, kept on this device first, then sent to Google Sheets ---------------- */
+const SESS='b01sim.sessions',SHEET='b01sim.sheet',PINK='b01sim.pin';
+const pad2=n=>String(n).padStart(2,'0'),stamp=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds());
+let sess=null;
+const sessions=()=>store.get(SESS,[]);
+function putSession(r){const a=sessions(),i=a.findIndex(x=>x.id===r.id);if(i>=0)a[i]=r;else a.push(r);store.set(SESS,a);}
+function openSession(visitor,role){
+  if(sess)closeSession('left');/* never leave a previous session hanging open */
+  const now=new Date();
+  sess={id:now.getTime().toString(36)+Math.random().toString(36).slice(2,6),visitor,role,stars:0,review:'',start:stamp(now),end:'',duration_s:0,
+    missions:0,score:'',coverage:'',correct:'',mine:'',wreck:'',unknown:'',fish:'',time_mode:'',device:TOUCH?'tablet':'pc',lang,status:'open',t0:now.getTime(),t1:now.getTime(),synced:false};
+  putSession(sess);
+}
+function noteMission(){
+  if(!sess)return;const R=S.result;sess.missions++;
+  Object.assign(sess,{score:R.total,coverage:R.covPct,correct:R.ok,time_mode:S.limit?String(Math.round(S.limit/60)):'free',lang,t1:Date.now()});
+  S.tg.forEach(x=>{sess[x.kind]=x.state==='hidden'?'miss':(x.dec||'none');});putSession(sess);
+}
+function closeSession(status){
+  if(!sess)return;const now=new Date();
+  Object.assign(sess,{end:stamp(now),t1:now.getTime(),duration_s:Math.round((now.getTime()-sess.t0)/1000),status,synced:false});
+  putSession(sess);sess=null;syncSoon();
+}
+/* a session left open by a closed tab or a reload is closed at its last activity */
+(()=>{const a=sessions();let ch=false;a.forEach(r=>{if(r.status==='open'){const t1=r.t1||r.t0;Object.assign(r,{status:'left',end:stamp(new Date(t1)),duration_s:Math.round((t1-r.t0)/1000)});ch=true;}});if(ch)store.set(SESS,a);})();
+/* what the sheet, the admin table and the CSV show: readable Arabic values, one column per field */
+const LBL={role:{visitor:'زائر',judge:'محكّم'},status:{rated:'قيّم',partial:'اختار النجوم ولم يرسل',skipped:'تخطّى التقييم',left:'غادر بدون تقييم',open:'جلسة جارية'},
+  dec:{hand:'تسليم للتحقق',clear:'غير خطِر',none:'بلا قرار',miss:'لم يُرصد'},device:{pc:'كمبيوتر',tablet:'تابلت'},lang:{ar:'عربي',en:'English'}};
+const COLS=[['id','المعرّف'],['visitor','الآيدي'],['role','الصفة'],['stars','التقييم (من 5)'],['review','الملاحظة'],['start','البداية'],['end','النهاية'],['duration_s','المدة (ثانية)'],
+  ['missions','عدد المهمات'],['score','النقاط'],['coverage','التغطية %'],['correct','قرارات صحيحة (من 4)'],['mine','اللغم المربوط'],['wreck','الحطام'],['unknown','الجسم غير المعروف'],['fish','الأسماك'],
+  ['time_mode','مدة المهمة'],['device','الجهاز'],['lang','اللغة'],['status','الحالة']];
+function human(r){
+  const o={};
+  COLS.forEach(([k])=>{let v=r[k];if(v==null)v='';
+    if(k==='role'||k==='status'||k==='device'||k==='lang')v=LBL[k][v]||v;
+    else if(k==='mine'||k==='wreck'||k==='unknown'||k==='fish')v=LBL.dec[v]||v;
+    else if(k==='time_mode')v=v==='free'?'حتى يكتمل المسح':(/^\d+$/.test(String(v))?v+' دقائق':v);
+    else if(k==='stars'&&!v)v='';
+    o[k]=v;});
+  return o;
+}
+const sheetCfg=()=>store.get(SHEET,{url:'',key:''});
+let syncing=false,syncT=0;
+function syncSoon(){clearTimeout(syncT);syncT=setTimeout(syncNow,600);}
+/* outbox: every closed session not yet in the sheet goes in one request; a lost answer only means it is sent again (the sheet updates by id) */
+async function syncNow(){
+  const c=sheetCfg();if(!c.url||!c.key)return {ok:false,msg:'not-set'};if(!navigator.onLine)return {ok:false,msg:'offline'};if(syncing)return {ok:false,msg:'busy'};
+  const pend=sessions().filter(r=>r.status!=='open'&&!r.synced);if(!pend.length)return {ok:true,sent:0};
+  syncing=true;
+  try{
+    const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({key:c.key,records:pend.map(human)})});
+    const j=await res.json();if(!j||!j.ok)throw new Error((j&&j.error)||('HTTP '+res.status));
+    const done=new Set((j.saved||[]).map(String)),a=sessions();a.forEach(r=>{if(done.has(String(r.id)))r.synced=true;});store.set(SESS,a);
+    return {ok:true,sent:done.size};
+  }catch(err){return {ok:false,msg:String((err&&err.message)||err)};}
+  finally{syncing=false;}
+}
+addEventListener('online',syncSoon);setInterval(()=>{syncNow();},60000);
+
+/* ---------------- rating: 1 to 5 stars and a comment, at the end of the session or early from the side button ---------------- */
+const FB={stars:0,from:'results'};
+const STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.85 5.95 6.5.85-4.75 4.5 1.2 6.45L12 17.4l-5.8 3.15 1.2-6.45L2.65 9.6l6.5-.85z"/></svg>';
+function renderStars(){
+  $('#fb-stars').innerHTML=[1,2,3,4,5].map(n=>'<button class="star" role="radio" aria-checked="'+(FB.stars===n)+'" aria-label="'+t('star_n').replace('{n}',n)+'" data-v="'+n+'" tabindex="'+((FB.stars||1)===n?0:-1)+'">'+STAR+'</button>').join('');
+  paintStars(FB.stars);$('#fb-send').disabled=!FB.stars;$('#fb-hint').hidden=!!FB.stars;
+}
+function paintStars(n){document.querySelectorAll('#fb-stars .star').forEach(b=>b.classList.toggle('on',+b.dataset.v<=n));$('#fb-star-l').textContent=n?t('s'+n):'';}
+function setStars(n){
+  FB.stars=n;document.querySelectorAll('#fb-stars .star').forEach(b=>{const v=+b.dataset.v;b.setAttribute('aria-checked',String(v===n));b.tabIndex=v===n?0:-1;});
+  paintStars(n);$('#fb-send').disabled=false;$('#fb-hint').hidden=true;S.lastInput=performance.now();
+}
+$('#fb-stars').addEventListener('click',e=>{const b=e.target.closest('.star');if(b){setStars(+b.dataset.v);b.focus();}});
+$('#fb-stars').addEventListener('pointerover',e=>{const b=e.target.closest('.star');if(b)paintStars(+b.dataset.v);});
+$('#fb-stars').addEventListener('pointerleave',()=>paintStars(FB.stars));
+$('#fb-stars').addEventListener('keydown',e=>{
+  const rtl=document.documentElement.dir==='rtl';let d=0;
+  if(e.key==='ArrowRight')d=rtl?-1:1;else if(e.key==='ArrowLeft')d=rtl?1:-1;else if(e.key==='ArrowUp')d=1;else if(e.key==='ArrowDown')d=-1;
+  if(d){e.preventDefault();e.stopPropagation();const n=clamp((FB.stars||0)+d,1,5);setStars(n);const b=$('#fb-stars .star[data-v="'+n+'"]');if(b)b.focus();}
+});
+function openFeedback(from){
+  FB.from=from;FB.stars=0;S.mode='feedback';S.paused=true;releaseKeys();S.lastInput=performance.now();$('#fb-text').value='';renderStars();
+  $('#fb-back').hidden=from!=='play';$('#o-res').hidden=true;$('#o-fb').hidden=false;$('#o-fb .card').scrollTop=0;showControls();
+  const s=$('#fb-stars .star');if(s)s.focus({preventScroll:true});
+}
+let thanksTimer=0;
+$('#fb-send').addEventListener('click',()=>{
+  if(!FB.stars)return;
+  if(sess){Object.assign(sess,{stars:FB.stars,review:$('#fb-text').value.trim().slice(0,600)});closeSession('rated');}
+  S.mode='thanks';$('#o-fb').hidden=true;$('#o-thanks').hidden=false;$('#th-done').focus();clearTimeout(thanksTimer);thanksTimer=setTimeout(toAttract,9000);
+});
+$('#fb-skip').addEventListener('click',()=>{closeSession('skipped');toAttract();});
+$('#fb-back').addEventListener('click',()=>{$('#o-fb').hidden=true;S.mode='play';S.paused=false;S.lastInput=performance.now();showControls();});
+$('#th-done').addEventListener('click',toAttract);
+
+/* ---------------- hidden admin panel: Ctrl+Shift+D, then the passcode; nothing on screen points to it ---------------- */
+const AD={src:'local',fails:0,lockUntil:0,list:[],mode:'enter'};
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function showPin(mode){
+  AD.mode=mode;const T0={create:['إنشاء رمز دخول الإدارة','اختر رمزًا من 4 خانات أو أكثر، واكتبه مرتين. يُطلب كل مرة تفتح فيها اللوحة على هذا الجهاز.'],
+    enter:['دخول الإدارة','اكتب رمز الدخول.'],change:['تغيير رمز الدخول','اكتب الرمز الجديد مرتين.']}[mode];
+  $('#pin-t').textContent=T0[0];$('#pin-msg').textContent=T0[1];$('#pin-2').hidden=mode==='enter';
+  $('#pin-1').value='';$('#pin-2').value='';$('#pin-err').textContent='';$('#o-pin').hidden=false;$('#pin-1').focus();
+}
+function openAdminGate(){if(!$('#o-admin').hidden||!$('#o-pin').hidden)return;showPin(store.get(PINK,null)?'enter':'create');}
+async function pinGo(){
+  const p1=$('#pin-1').value,p2=$('#pin-2').value,err=$('#pin-err');
+  if(AD.mode!=='enter'){
+    if(p1.length<4){err.textContent='الرمز لازم يكون 4 خانات أو أكثر.';return;}
+    if(p1!==p2){err.textContent='الرمزان غير متطابقين.';return;}
+    const salt=Math.random().toString(36).slice(2,10);store.set(PINK,{salt,hash:await sha(salt+p1)});
+    $('#o-pin').hidden=true;openAdmin();return;
+  }
+  if(Date.now()<AD.lockUntil){err.textContent='محاولات كثيرة. انتظر دقيقة.';return;}
+  const p=store.get(PINK,null);
+  if(p&&await sha(p.salt+p1)===p.hash){AD.fails=0;$('#o-pin').hidden=true;openAdmin();}
+  else{AD.fails++;$('#pin-1').value='';err.textContent='الرمز غير صحيح.';if(AD.fails>=5){AD.lockUntil=Date.now()+60000;AD.fails=0;}}
+}
+$('#pin-go').addEventListener('click',pinGo);
+$('#pin-x').addEventListener('click',()=>{$('#o-pin').hidden=true;S.lastInput=performance.now();});
+function closeAdmin(){$('#o-pin').hidden=true;$('#o-admin').hidden=true;S.lastInput=performance.now();}
+function openAdmin(){
+  const c=sheetCfg();$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
+  if($('#o-admin').hidden)AD.src='local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
+}
+const sheetGet=c=>fetch(c.url+(c.url.includes('?')?'&':'?')+'key='+encodeURIComponent(c.key)).then(r=>r.json());
+async function loadAdmin(){
+  $('#ad-src-local').setAttribute('aria-pressed',String(AD.src==='local'));$('#ad-src-all').setAttribute('aria-pressed',String(AD.src==='all'));
+  if(AD.src==='local'){AD.list=sessions().slice().reverse().map(r=>Object.assign(human(r),{_where:r.status==='open'?'—':r.synced?'في الجدول':'على الجهاز فقط'}));renderAdmin();return;}
+  const c=sheetCfg();if(!c.url||!c.key){AD.list=[];renderAdmin('اربط Google Sheets من الإعدادات تحت أولًا.');return;}
+  AD.list=[];renderAdmin('جارٍ التحميل من Google Sheets…');
+  try{
+    const j=await sheetGet(c);if(!j.ok)throw new Error(j.error||'');
+    const byId=new Map();(j.records||[]).forEach(r=>byId.set(String(r.id),Object.assign(r,{_where:'في الجدول'})));
+    sessions().filter(r=>!r.synced&&r.status!=='open').forEach(r=>byId.set(String(r.id),Object.assign(human(r),{_where:'على الجهاز فقط'})));
+    AD.list=[...byId.values()].sort((a,b)=>String(b.start).localeCompare(String(a.start)));renderAdmin();
+  }catch(e){AD.list=[];renderAdmin('تعذّر التحميل من Google Sheets. تأكد من الرابط والمفتاح والاتصال بالإنترنت.');}
+}
+const escH=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const starsTxt=n=>{n=Math.round(+n||0);return n?'★'.repeat(n)+'☆'.repeat(5-n):'—';};
+function renderAdmin(msg){
+  /* only ratings the visitor actually sent count in the averages shown to the judges */
+  const L=AD.list,rated=L.filter(r=>+r.stars>0&&(r.status==='قيّم'||r.status==='rated')),avg=a=>a.length?a.reduce((s,r)=>s+(+r.stars),0)/a.length:0;
+  const nr=n=>n===1?'تقييم واحد':n===2?'تقييمان':n>=3&&n<=10?n+' تقييمات':n+' تقييمًا';
+  const judges=rated.filter(r=>r.role==='محكّم'),visitors=rated.filter(r=>r.role!=='محكّم');
+  const durs=L.map(r=>+r.duration_s||0).filter(Boolean),corr=L.filter(r=>r.correct!==''&&r.correct!=null&&!isNaN(+r.correct)).map(r=>+r.correct);
+  const pending=sessions().filter(r=>r.status!=='open'&&!r.synced).length,c=sheetCfg(),a=avg(rated);
+  $('#ad-status').textContent=(c.url&&c.key?'Google Sheets مرتبط.':'Google Sheets غير مرتبط، والبيانات محفوظة على هذا الجهاز فقط.')+(pending?' '+pending+' جلسة بانتظار الإرسال.':'')+(msg?' '+msg:'');
+  const mini=n=>'<span class="mini" aria-hidden="true">'+[1,2,3,4,5].map(i=>'<svg viewBox="0 0 24 24" class="'+(i<=Math.round(n)?'on':'')+'"><path d="M12 2.8l2.85 5.95 6.5.85-4.75 4.5 1.2 6.45L12 17.4l-5.8 3.15 1.2-6.45L2.65 9.6l6.5-.85z"/></svg>').join('')+'</span>';
+  const fmtAvg=x=>x?x.toFixed(1):'—';
+  $('#ad-sum').innerHTML=
+    '<div class="ad-avg"><span>متوسط التقييم</span><b class="n">'+fmtAvg(a)+'</b>'+mini(a)+'<small>'+(rated.length?'من '+nr(rated.length):'ما فيه تقييمات للحين')+'</small></div>'+
+    '<div><span>المحكّمون</span><b class="n">'+fmtAvg(avg(judges))+'</b><small>'+(judges.length?nr(judges.length):'—')+'</small></div>'+
+    '<div><span>الزوار</span><b class="n">'+fmtAvg(avg(visitors))+'</b><small>'+(visitors.length?nr(visitors.length):'—')+'</small></div>'+
+    '<div><span>الجلسات</span><b class="n">'+L.length+'</b><small>متوسط المدة '+(durs.length?fmt(durs.reduce((s,x)=>s+x,0)/durs.length):'—')+'</small></div>'+
+    '<div><span>القرارات الصحيحة</span><b class="n">'+(corr.length?(corr.reduce((s,x)=>s+x,0)/corr.length).toFixed(1)+'/4':'—')+'</b><small>متوسط من أكمل مهمة</small></div>';
+  const cnt=[5,4,3,2,1].map(s=>[s,rated.filter(r=>Math.round(+r.stars)===s).length]);
+  $('#ad-dist').innerHTML=cnt.map(([s,n])=>'<div class="r"><span class="st">'+'★'.repeat(s)+'</span><span class="bar"><i style="width:'+(rated.length?n/rated.length*100:0).toFixed(1)+'%"></i></span><span class="n">'+n+(rated.length?' ('+Math.round(n/rated.length*100)+'%)':'')+'</span></div>').join('');
+  $('#ad-rows').innerHTML=L.map(r=>'<tr><td><bdi>'+escH(r.visitor)+'</bdi></td><td>'+escH(r.role)+'</td><td class="st" aria-label="'+(+r.stars||0)+' من 5">'+starsTxt(r.stars)+'</td><td class="rv">'+escH(r.review)+'</td><td class="n">'+escH(r.start)+'</td><td class="n">'+(r.duration_s?fmt(+r.duration_s):'—')+'</td><td class="n">'+escH(r.score)+'</td><td class="n">'+(r.correct!==''&&r.correct!=null?escH(r.correct)+'/4':'—')+'</td><td>'+escH(r.status)+'</td><td>'+escH(r._where||'')+'</td></tr>').join('');
+  $('#ad-empty').hidden=L.length>0;
+}
+function csvCell(v){v=v==null?'':String(v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';}
+function exportCsv(){
+  const rows=[COLS.map(([,h])=>h)].concat(AD.list.map(r=>COLS.map(([k])=>r[k])));
+  const text='﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));
+  a.download='b01-feedback-'+(AD.src==='all'?'all-':'')+stamp(new Date()).slice(0,10)+'.csv';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+}
+$('#ad-src-local').addEventListener('click',()=>{AD.src='local';loadAdmin();});
+$('#ad-src-all').addEventListener('click',()=>{AD.src='all';loadAdmin();});
+$('#ad-csv').addEventListener('click',exportCsv);
+$('#ad-close').addEventListener('click',closeAdmin);
+$('#ad-save').addEventListener('click',async()=>{
+  const url=$('#ad-url').value.trim(),key=$('#ad-key').value.trim(),m=$('#ad-set-msg');
+  if(url&&!/^https:\/\//.test(url)){m.textContent='الرابط لازم يبدأ بـ https://';return;}
+  store.set(SHEET,{url,key});if(!url||!key){m.textContent='انحفظ. Google Sheets غير مرتبط على هذا الجهاز.';loadAdmin();return;}
+  m.textContent='جارٍ اختبار الاتصال…';
+  try{const j=await sheetGet({url,key});
+    if(!j.ok){m.textContent='الرابط يرد، لكن المفتاح غير صحيح.';return;}
+    m.textContent='الاتصال يعمل، وفي الجدول '+(j.records||[]).length+' جلسة.';
+    const r=await syncNow();if(r.ok&&r.sent)m.textContent+=' وأُرسلت '+r.sent+' جلسة محفوظة على هذا الجهاز.';
+  }catch(e){m.textContent='تعذّر الوصول للرابط. تأكد منه ومن الاتصال بالإنترنت.';}
+  loadAdmin();
+});
+$('#ad-sync').addEventListener('click',async()=>{
+  const m=$('#ad-set-msg');m.textContent='جارٍ الإرسال…';const r=await syncNow();
+  m.textContent=r.ok?(r.sent?'أُرسلت '+r.sent+' جلسة.':'ما فيه شيء بانتظار الإرسال.'):r.msg==='not-set'?'اربط Google Sheets أولًا.':r.msg==='offline'?'ما فيه اتصال بالإنترنت.':'تعذّر الإرسال: '+r.msg;
+  loadAdmin();
+});
+$('#ad-pin').addEventListener('click',()=>showPin('change'));
+$('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.'))store.set('b01sim.best',[]);});
+$('#ad-wipe').addEventListener('click',()=>{
+  const a=sessions().filter(r=>r.status!=='open'),pend=a.filter(r=>!r.synced).length;
+  if(!confirm('حذف '+a.length+' جلسة محفوظة على هذا الجهاز؟'+(pend?' منها '+pend+' لم تُرسل إلى Google Sheets وستضيع.':' كلها في Google Sheets وتبقى هناك.')+' لا يمكن التراجع.'))return;
+  store.set(SESS,sess?[sess]:[]);loadAdmin();
+});
 
 /* mission time: until the survey is complete, or a time the visitor sets (time then runs faster to fit the full survey) */
 function renderTimeSel(){
@@ -462,9 +704,9 @@ function observe(tg,axis,across,px,py){
 function endMission(){
   S.paused=true;S.mode='results';S.lastInput=performance.now();calcCov();
   const covPct=Math.round(S.covPct*100),ok=S.tg.filter(x=>x.dec&&x.dec===GOOD[x.kind]).length,total=Math.max(0,Math.round(S.score+covPct*3));
-  const best=store.get('b01sim.best',[]);const me={s:total,c:covPct,d:Date.now()};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set('b01sim.best',top);
-  S.result={total,covPct,ok,real:S.real,top,me:me.d};
-  renderResults();$('#o-res').hidden=false;$('#b-again').focus();showControls();updateHud(true);
+  const best=store.get('b01sim.best',[]);const me={s:total,c:covPct,d:Date.now(),n:S.visitor||''};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set('b01sim.best',top);
+  S.result={total,covPct,ok,real:S.real,top,me:me.d};noteMission();
+  renderResults();$('#o-res').hidden=false;$('#b-rate').focus();showControls();updateHud(true);
 }
 function renderResults(){
   const R=S.result;if(!R)return;
@@ -472,7 +714,9 @@ function renderResults(){
   const rows=[...S.tg].sort((a,b)=>(a.id||'T-99').localeCompare(b.id||'T-99'));
   $('#r-tg').innerHTML=rows.map(x=>{const dec=x.state==='hidden'?'dec_miss':x.dec?'dec_'+x.dec:'dec_none',good=!!x.dec&&x.dec===GOOD[x.kind];
     return '<li><span class="n">'+(x.id||'—')+'</span><span>'+t('k_'+x.kind)+'</span><span class="d">'+t(dec)+'</span><span class="'+(good?'ok':'bad')+'" role="img" aria-label="'+t(good?'r_right':'r_wrong')+'">'+(good?'✓':'✗')+'</span></li>';}).join('');
-  $('#r-best').innerHTML='<li class="hd"><span></span><span>'+t('score')+'</span><span>'+t('cov')+'</span></li>'+R.top.map((b,i)=>'<li class="'+(b.d===R.me?'me':'')+'"><span class="n">'+(i+1)+'</span><span class="n">'+b.s+'</span><span class="n">'+b.c+'%</span></li>').join('');
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  $('#r-who').textContent=S.visitor?t('visitor')+': '+S.visitor:'';
+  $('#r-best').innerHTML='<li class="hd"><span></span><span>'+t('visitor')+'</span><span>'+t('score')+'</span><span>'+t('cov')+'</span></li>'+R.top.map((b,i)=>'<li class="'+(b.d===R.me?'me':'')+'"><span class="n">'+(i+1)+'</span><span>'+(b.n?esc(b.n):'—')+'</span><span class="n">'+b.s+'</span><span class="n">'+b.c+'%</span></li>').join('');
 }
 
 /* ---------------- simulation step ---------------- */
@@ -528,7 +772,7 @@ const camPos=new THREE.Vector3(-170,14,40),camLook=new THREE.Vector3();
 function updateCamera(dt,tt){
   const b=S.boat,bp=W(b.x,b.y,0),fwd=new THREE.Vector3(Math.sin(b.h),0,-Math.cos(b.h)),right=new THREE.Vector3(Math.cos(b.h),0,Math.sin(b.h));
   let want,look;
-  if(S.mode==='attract'||S.mode==='brief'){const a=tt*.07;want=bp.clone().add(new THREE.Vector3(Math.cos(a)*13,3.4+1.2*Math.sin(tt*.13),Math.sin(a)*13));look=bp.clone().add(new THREE.Vector3(0,.7,0));}
+  if(S.mode==='attract'||S.mode==='brief'||S.mode==='login'){const a=tt*.07;want=bp.clone().add(new THREE.Vector3(Math.cos(a)*13,3.4+1.2*Math.sin(tt*.13),Math.sin(a)*13));look=bp.clone().add(new THREE.Vector3(0,.7,0));}
   else if(S.cam==='top'){want=bp.clone().add(new THREE.Vector3(0,120,40));look=bp.clone();}
   else if(S.cam==='side'){want=bp.clone().addScaledVector(right,9.5*(S.camSide||1)).addScaledVector(fwd,1.2).add(new THREE.Vector3(0,2.1,0));look=bp.clone().addScaledVector(fwd,.4).add(new THREE.Vector3(0,.8,0));}
   else{want=bp.clone().addScaledVector(fwd,-15).addScaledVector(right,5.5).add(new THREE.Vector3(0,5.8,0));look=bp.clone().addScaledVector(fwd,5).add(new THREE.Vector3(0,1.2,0));}
@@ -641,7 +885,7 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;
   /* time compression: several fixed sub-steps per frame, so turns and detection behave the same at any speed */
   if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=dt*S.k,n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
-  else if(S.mode==='brief'&&S.auto)step(dt);
+  else if((S.mode==='brief'||S.mode==='login')&&S.auto)step(dt);
   if(S.mode==='attract'){S.capT+=dt;if(S.capT>6.5){S.capT=0;S.capIdx=(S.capIdx+1)%6;$('#cap-text').textContent=t('a'+(S.capIdx+1));}}
   /* back to the attract demo after 60 s without input, on any screen; a mission running on autopilot is left to finish */
   else if(!(S.mode==='play'&&S.auto&&!S.paused)&&now-S.lastInput>IDLE_MS)toAttract();
@@ -661,13 +905,14 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,
+  get sess(){return sess;},
   advance(sec,dt){dt=dt||1/30;const n=Math.round(sec/dt);for(let i=0;i<n;i++){if(!S.paused&&(S.mode==='attract'||S.mode==='play'))step(dt);}
     updateCamera(1,performance.now()/1000);last=performance.now();frame(performance.now());updateHud(true);drawMinimap();drawWCD();
     return {mode:S.mode,time:+S.time.toFixed(1),real:+S.real.toFixed(1),x:+S.boat.x.toFixed(1),y:+S.boat.y.toFixed(1),cov:Math.round(S.covPct*100),covA:Math.round(S.covA*100),covB:Math.round(S.covB*100),
       tg:S.tg.map(x=>x.kind+':'+x.state+(x.id?'('+x.id+')':'')).join(' '),cur:S.cur&&S.cur.kind,pend:S.pend.length,paused:S.paused,wp:S.wp,routeDone:S.routeDone};}};
 
-resetScenario('attract');applyLang();toAttract();
+resetScenario('attract');applyLang();toAttract();syncSoon();
 /* redraw the hull decals once the web fonts arrive (Amiri for the flag is fetched only when asked for) */
 const redrawDecals=()=>decals.forEach(d=>{d.draw(d.cv.getContext('2d'));d.tex.needsUpdate=true;});
 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>{redrawDecals();applyLang();});
