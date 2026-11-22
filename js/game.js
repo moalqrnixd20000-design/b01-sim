@@ -2,7 +2,6 @@
    One vessel, one survey area and four targets that follow the auv-platform demo:
    a possible moored mine, a likely wreck, an unknown object and marine life. All data is simulated. */
 import * as THREE from '../vendor/three.module.min.js';
-import {createAudio} from './audio.js';
 
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -10,9 +9,6 @@ const D2R=Math.PI/180;
 const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;};
 const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-/* sound hook: js/audio.js sets AUDIO once the page has been touched; until then every call is silent */
-let AUDIO=null;const sfx=(n,o)=>{if(AUDIO)AUDIO.play(n,o);};
-function startAudio(){if(AUDIO){AUDIO.resume();return;}AUDIO=createAudio('sounds/');if(AUDIO){AUDIO.setMuted(store.get('b01sim.mute',false));AUDIO.setVolume(store.get('b01sim.vol',80)/100);}}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 
 /* ---------------- language ---------------- */
@@ -60,7 +56,7 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  tour3:'هنا يشوف السونار عمود الماء تحت المركبة. الهدف يبان كنقطة مضيئة.',tour4:'لما يُرصد هدف تفتح حزمة الأدلة، وأنت تقرر. اسحب بالماوس لتدير الكاميرا، والعجلة للتقريب.',
  t_next:'التالي',t_done:'ابدأ',t_skip:'تخطي',t_of:'{i} من 4',
  hl_above:'فوق القاع',hl_depth:'تحت السطح',hl_bed:'على القاع',hl_bg_new:'مسح الأساس: ما كان هنا',hl_bg_old:'مسح الأساس: كان موجودًا',hl_shadow:'ظل صوتي',hl_noshadow:'الظل لم يُرَ',
- hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2',mute:'كتم الصوت',unmute:'تشغيل الصوت'},
+ hl_still:'ثابت',hl_sway:'يتأرجح حول نقطة',hl_free:'يتحرك بحرية',hl_need:'يحتاج تمريرة ثانية',hl_h1:'اتجاه 1',hl_h2:'اتجاه 2'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
  press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera, drag to turn the view',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
@@ -104,7 +100,7 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  tour3:'Here the sonar sees the water column under the vessel. A target shows as a bright spot.',tour4:'When a target is detected, the evidence package opens and you decide. Drag to turn the camera; scroll to zoom.',
  t_next:'Next',t_done:'Start',t_skip:'Skip',t_of:'{i} of 4',
  hl_above:'above the seabed',hl_depth:'below the surface',hl_bed:'on the seabed',hl_bg_new:'baseline: nothing here',hl_bg_old:'baseline: already there',hl_shadow:'acoustic shadow',hl_noshadow:'shadow not seen',
- hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2',mute:'Mute',unmute:'Sound on'}};
+ hl_still:'stays put',hl_sway:'sways around a point',hl_free:'moves freely',hl_need:'needs another pass',hl_h1:'heading 1',hl_h2:'heading 2'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
@@ -115,7 +111,7 @@ function applyLang(){
   document.querySelectorAll('[data-tl]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.tl));});
   $('#b-lang').textContent=lang==='ar'?'English':'العربية';
   $('#br-ctrl').textContent=TOUCH?t('b_touch'):t('b_keys');
-  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();renderSnd();
+  setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();
   if(S.mode==='attract')$('#cap-text').textContent=t('a'+(S.capIdx+1));
   if(S.cur&&!$('#o-hand').hidden)renderHand();
   if(S.mode==='results')renderResults();
@@ -448,7 +444,7 @@ let pingT=0;
 function updatePings(dt,tt,bp){
   pingT+=dt;
   if(FX.bigPing||pingT>4){const p=pings.reduce((a,c)=>c.t>a.t?c:a);p.t=0;p.big=FX.bigPing;p.m.position.set(bp.x,.2,bp.z);p.m.material.color.setHex(p.big?0xff6b45:0x8fd6cf);p.m.visible=true;
-    if(!p.big&&(S.mode==='play'||S.mode==='attract')&&!S.paused)sfx('ping',{soft:true});FX.bigPing=false;pingT=0;}
+    FX.bigPing=false;pingT=0;}
   for(const p of pings){if(!p.m.visible)continue;p.t+=dt;const u=p.t/2.6;if(u>=1){p.m.visible=false;continue;}
     const r=1+u*(p.big?40:26);p.m.scale.set(r,1,r);p.m.position.y=waveH(p.m.position.x,p.m.position.z,tt)+.12;p.m.material.opacity=(p.big?.8:.38)*(1-u);}
 }
@@ -470,7 +466,6 @@ function anyInput(){S.lastInput=performance.now();if(S.mode==='attract'){openLog
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down'};
 const adminOpen=()=>!$('#o-admin').hidden||!$('#o-pin').hidden;
 addEventListener('keydown',e=>{
-  startAudio();/* the first key or click on the page is what lets the browser play sound */
   /* the hidden admin panel: Ctrl+Shift+D from any screen, then the passcode */
   if(e.ctrlKey&&e.shiftKey&&e.code==='KeyD'){e.preventDefault();e.stopPropagation();openAdminGate();return;}
   if(adminOpen()){if(e.key==='Escape')closeAdmin();else if(e.key==='Enter'&&e.target&&e.target.id&&e.target.id.startsWith('pin-')){e.preventDefault();pinGo();}return;}
@@ -487,7 +482,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyC')toggleCam();
 });
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k)press(k,0);});
-addEventListener('pointerdown',e=>{startAudio();if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
+addEventListener('pointerdown',e=>{if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
 function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;if(S.goal){S.goal=null;S.queue=[];}$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
 function releaseKeys(){S.keys={left:0,right:0,up:0,down:0};document.querySelectorAll('.tbtn.on').forEach(b=>b.classList.remove('on'));}
 document.querySelectorAll('.tbtn').forEach(b=>{const k=b.dataset.k;
@@ -678,7 +673,7 @@ $('#pin-go').addEventListener('click',pinGo);
 $('#pin-x').addEventListener('click',()=>{$('#o-pin').hidden=true;S.lastInput=performance.now();});
 function closeAdmin(){$('#o-pin').hidden=true;$('#o-admin').hidden=true;S.lastInput=performance.now();}
 function openAdmin(){
-  const c=sheetCfg();$('#ad-vol').value=store.get('b01sim.vol',80);$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
+  const c=sheetCfg();$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
   /* with the admin key saved, the panel opens on all devices: that is what the team reads */
   if($('#o-admin').hidden)AD.src=c.key?'all':'local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
 }
@@ -753,7 +748,6 @@ $('#ad-sync').addEventListener('click',async()=>{
   loadAdmin();
 });
 $('#ad-pin').addEventListener('click',()=>showPin('change'));
-$('#ad-vol').addEventListener('input',e=>{const v=+e.target.value;store.set('b01sim.vol',v);if(AUDIO)AUDIO.setVolume(v/100);});
 $('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.'))store.set('b01sim.best',[]);});
 $('#ad-wipe').addEventListener('click',()=>{
   const a=sessions().filter(r=>r.status!=='open'),pend=a.filter(r=>!r.synced).length;
@@ -806,7 +800,6 @@ function renderHand(){
 function queueHand(tg,msg){
   releaseKeys();toast(t(msg),'hit');if(!S.pend.includes(tg))S.pend.push(tg);
   FX.slowT=1;FX.flashT=1.3;FX.bigPing=true;const bd=document.body;bd.classList.remove('det');void bd.offsetWidth;bd.classList.add('det');setTimeout(()=>bd.classList.remove('det'),1400);
-  sfx('ping');setTimeout(()=>sfx('ping'),260);sfx('alert');
   if(!S.cur)setTimeout(()=>{if(S.mode==='play'){S.paused=true;nextHand();}},1000);
 }
 function nextHand(){
@@ -820,13 +813,9 @@ function decide(kind){
   if(kind==='cross'){if(!tg.crossed){S.score+=40;tg.crossed=true;}tg.state='cross';tg.fb='fb_cross';planCross(tg);}
   else{const pts=K==='mine'&&kind==='hand'?(e.conf>=80?300:150):SCORE[K][kind];S.score+=pts;tg.state=kind;tg.dec=kind;
     tg.fb=K==='mine'&&kind==='hand'&&e.conf<80?'fb_mine_weak':'fb_'+K+'_'+kind;}
-  setTg3D(tg);renderHand();updateHud(true);sfx(kind==='cross'?'click':'confirm');
+  setTg3D(tg);renderHand();updateHud(true);
 }
-/* a soft click for every button, except the decision buttons, which confirm instead */
-addEventListener('click',e=>{const bt=e.target.closest&&e.target.closest('button');if(bt&&!bt.closest('#h-act'))sfx('click');},true);
-/* mute button in the top bar, remembered on this device */
-function renderSnd(){const m=store.get('b01sim.mute',false),b=$('#b-snd');b.setAttribute('aria-pressed',String(m));b.setAttribute('aria-label',t(m?'unmute':'mute'));b.title=t(m?'unmute':'mute');b.classList.toggle('off',m);}
-$('#b-snd').addEventListener('click',()=>{const m=!store.get('b01sim.mute',false);store.set('b01sim.mute',m);if(AUDIO)AUDIO.setMuted(m);renderSnd();S.lastInput=performance.now();});
+
 /* cross-pass: perpendicular to the first heading, running far enough past the target that the boat has finished its turn
    and is straight again before it reaches it; then back to where the survey line was left */
 function planCross(tg){
@@ -982,9 +971,9 @@ mmCv.addEventListener('pointerdown',e=>{
   if(S.mode!=='play'||S.paused)return;e.stopPropagation();S.lastInput=performance.now();
   const r=mmCv.getBoundingClientRect(),x=(e.clientX-r.left-MM.w/2)/MM.sc,y=(MM.h/2-(e.clientY-r.top))/MM.sc;
   for(const tg of S.tg){if(tg.state==='hidden'||tg.state==='open')continue;const [tx,ty]=tpos(tg,S.time);if(Math.hypot(tx-x,ty-y)*MM.sc<11){openTargetFile(tg);return;}}
-  const b=S.boat;S.goal=[x,y];S.queue=[[x,y]];S.legFrom=[b.x,b.y];S.auto=true;S.thr=MAXV;S.routeDone=false;$('#b-auto').setAttribute('aria-pressed','true');toast(t('goto'));sfx('click');
+  const b=S.boat;S.goal=[x,y];S.queue=[[x,y]];S.legFrom=[b.x,b.y];S.auto=true;S.thr=MAXV;S.routeDone=false;$('#b-auto').setAttribute('aria-pressed','true');toast(t('goto'));
 });
-function openTargetFile(tg){S.paused=true;releaseKeys();S.cur=tg;S.evHi=S.evPin=null;renderHand();$('#o-hand').hidden=false;$('#o-hand .card').scrollTop=0;$('#d-cont').focus({preventScroll:true});sfx('click');}
+function openTargetFile(tg){S.paused=true;releaseKeys();S.cur=tg;S.evHi=S.evPin=null;renderHand();$('#o-hand').hidden=false;$('#o-hand .card').scrollTop=0;$('#d-cont').focus({preventScroll:true});}
 function drawMinimap(){
   const {ctx,w,h}=fitCanvas(mmCv);const m=RUN+12,sx=w/(AREA.x1-AREA.x0+2*m),sy=h/(AREA.y1-AREA.y0+2*m),sc=Math.min(sx,sy);
   const X=x=>w/2+x*sc,Y=y=>h/2-y*sc;MM.w=w;MM.h=h;MM.sc=sc;
@@ -1084,7 +1073,7 @@ function drawEvHi(ctx,tg,U,Z,pxm,w,z0,ar){
   ctx.restore();
 }
 const setEvHi=k=>{if(S.evHi===k)return;S.evHi=k;document.querySelectorAll('#h-ev li').forEach(li=>{const on=li.dataset.k===k;li.classList.toggle('on',on);li.setAttribute('aria-pressed',String(on));});requestAnimationFrame(drawSnip);};
-$('#h-ev').addEventListener('click',e=>{const li=e.target.closest('li');if(!li)return;sfx('click');S.evPin=S.evPin===li.dataset.k?null:li.dataset.k;setEvHi(S.evPin);});
+$('#h-ev').addEventListener('click',e=>{const li=e.target.closest('li');if(!li)return;S.evPin=S.evPin===li.dataset.k?null:li.dataset.k;setEvHi(S.evPin);});
 $('#h-ev').addEventListener('pointerover',e=>{const li=e.target.closest('li');if(li)setEvHi(li.dataset.k);});
 $('#h-ev').addEventListener('pointerleave',()=>setEvHi(S.evPin||null));
 $('#h-ev').addEventListener('focusin',e=>{const li=e.target.closest('li');if(li)setEvHi(li.dataset.k);});
@@ -1144,7 +1133,6 @@ function frame(now){
   sun.position.set(bp.x-16,22,bp.z+9);sun.target.position.copy(bp);
   updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);updateFx(dt,tt,b,bp);updatePings(dt,tt,bp);
   const fl=FX.flashT>0?clamp((FX.flashT-=dt)/1.3,0,1):0;ud.fan[0].material.color.setHex(0x8fd6cf).lerp(CORAL,fl);ud.fan[0].material.opacity=.2+.3*fl;
-  if(AUDIO)AUDIO.update({v:b.v/MAXV,uw:FX.uw,mode:S.mode,paused:S.paused});
   for(const tg of S.tg){const o=T3[tg.kind],[px,py]=tpos(tg,S.time);o.g.position.copy(W(px,py,o.y));o.ring.position.copy(W(px,py,1.1));if(o.ring.visible)o.ring.rotation.z=tt*.6;
     if(tg.kind==='mine'){o.g.position.y=o.y+Math.sin(tt*.8)*.15;const g0=W(tg.x,tg.y,0);updateRope(o,g0.x,g0.z,o.g.position,dt,tt);}
     if(o.fish)o.fish.forEach(f=>{const a=f.a+tt*f.s;f.p.position.set(Math.cos(a)*f.rad,f.h+Math.sin(tt*.9+f.a)*.15,Math.sin(a)*f.rad);v3.set(-Math.sin(a),0,Math.cos(a));f.p.rotation.y=Math.atan2(-v3.z,v3.x);});}
@@ -1157,7 +1145,7 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,startAudio,get audio(){return AUDIO;},
+window.__b01={S,decide,startPlay,toAttract,openBrief,ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
   get wake(){const c=wkGeo.attributes.color.array;return {n:wakePts.length,count:wkGeo.drawRange.count,alpha:[3,7,11,15,35,39,43,47,203,207].map(i=>+c[i].toFixed(2))};},
   phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
