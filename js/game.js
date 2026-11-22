@@ -25,7 +25,7 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  b_tip:'السونار يحسب البيانات وأنت تمشي مستقيمًا فقط، فخلّ الانعطاف خارج حدود المنطقة.',
  b_keys:'التحكم: الأسهم للقيادة والسرعة، المسافة لتشغيل الطيار الآلي، C لتغيير الكاميرا.',b_touch:'التحكم: أزرار اليسار للتوجيه، وأزرار اليمين للسرعة.',start:'ابدأ المهمة',
  t_label:'مدة المهمة',t_free:'حتى يكتمل المسح',t_set:'وقت أحدده',less:'أقل',more:'أكثر',
- t_note_free:'المسح الكامل بالطيار الآلي يأخذ نحو {n}، والوقت يتوقف وأنت تقرأ حزمة التسليم.',t_note_fast:'يتسارع الزمن حتى يكتمل المسح في الوقت اللي تحدده.',t_note_ok:'الوقت يكفي للمسح الكامل بالسرعة العادية.',
+ t_note_free:'المسح الكامل بالطيار الآلي يأخذ نحو {n}، والوقت يتوقف وأنت تقرأ حزمة التسليم.',t_note_limit:'المهمة تنتهي لما يخلص الوقت، حتى لو ما اكتمل المسح.',
  turning:'انعطاف: بيانات السونار لا تُحتسب',outside:'خارج منطقة المسح',det_wc:'رصد هدف في عمود الماء',det_sb:'رصد هدف على القاع',detAttract:'رصد هدف، والنظام يشرح سبب التصنيف',again2:'رصد الهدف من اتجاه جديد',takeover:'تحكم يدوي',autoOn:'الطيار الآلي يعمل',
  lv_high:'خطر محتمل مرتفع',lv_potential:'خطر محتمل',lv_unknown:'غير معروف، يحتاج تحققًا',lv_none:'غير خطِر',
  h_conf:'ثقة النموذج',snip:'مقطع السونار حول الهدف',
@@ -70,7 +70,7 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  b_tip:'Sonar data counts only while you run straight, so make your turns outside the area.',
  b_keys:'Controls: arrows steer and set speed, Space switches autopilot, C changes camera.',b_touch:'Controls: left buttons steer, right buttons set speed.',start:'Start mission',
  t_label:'Mission time',t_free:'Until the survey is complete',t_set:'Set a time',less:'Less',more:'More',
- t_note_free:'A full autopilot survey takes about {n}; the clock stops while you read a handover package.',t_note_fast:'Time runs faster so the full survey fits the time you set.',t_note_ok:'That is enough for the full survey at normal speed.',
+ t_note_free:'A full autopilot survey takes about {n}; the clock stops while you read a handover package.',t_note_limit:'The mission ends when the time is up, even if the survey is not complete.',
  turning:'Turning: sonar data is not counted',outside:'Outside the survey area',det_wc:'Target detected in the water column',det_sb:'Target detected on the seabed',detAttract:'Target detected; the system explains why',again2:'Target seen from a new heading',takeover:'Manual control',autoOn:'Autopilot on',
  lv_high:'High potential hazard',lv_potential:'Potential hazard',lv_unknown:'Unknown, needs verification',lv_none:'Non-hazardous',
  h_conf:'Model confidence',snip:'Sonar slice around the target',
@@ -143,8 +143,8 @@ function buildRoute(){
   return r;
 }
 const newTargets=()=>TARGETS.map(d=>({...d,state:'hidden',obs:[],shadow:false,lock:false,id:'',fb:'',cross:null,crossed:false,dec:''}));
-/* a judge has about two minutes: the default is a two-minute mission (new key, so older saved choices do not override it) */
-const timeSel=Object.assign({free:false,min:2},store.get('b01sim.timeq',{}));
+/* default: until the survey is complete (new key, so the short-lived two-minute default saved on some devices is ignored) */
+const timeSel=Object.assign({free:true,min:5},store.get('b01sim.tlim',{}));
 const S={mode:'attract',paused:false,time:0,real:0,k:1,limit:0,score:0,batt:86,cov:new Uint8Array(NX*NY),covPct:0,covA:0,covB:0,
   boat:{x:AREA.x0-RUN-30,y:A_Y(0),h:90*D2R,v:0,r:0},auto:true,route:buildRoute(),wp:0,queue:[],legFrom:null,routeDone:false,
   keys:{left:0,right:0,up:0,down:0},thr:0,cam:'chase',lastInput:0,capIdx:0,capT:0,
@@ -153,7 +153,7 @@ const S={mode:'attract',paused:false,time:0,real:0,k:1,limit:0,score:0,batt:86,c
 function tpos(tg,tt){if(tg.kind==='fish')return [tg.x+7*Math.sin(tt*.045),tg.y+5*Math.sin(tt*.06+1)];if(tg.kind==='mine')return [tg.x+.3*Math.sin(tt*.8),tg.y];return [tg.x,tg.y];}
 function resetScenario(mode){
   S.mode=mode;S.paused=false;S.time=0;S.real=0;S.score=0;S.batt=86;S.cov.fill(0);S.covPct=S.covA=S.covB=0;
-  if(mode==='play'&&!timeSel.free){S.limit=timeSel.min*60;S.k=Math.max(1,ROUTE_S/(.88*S.limit));}else{S.limit=0;S.k=1;}
+  S.k=1;S.limit=mode==='play'&&!timeSel.free?timeSel.min*60:0;/* normal speed always; a set time only ends the mission */
   Object.assign(S.boat,{x:AREA.x0-RUN-30,y:A_Y(0),h:90*D2R,v:mode==='attract'?MAXV:0,r:0});
   S.auto=true;S.wp=0;S.queue=[];S.legFrom=null;S.goal=null;S.routeDone=false;S.thr=MAXV;/* the mission starts on autopilot: the AI works from the first second */S.trail=[];
   S.tg=newTargets();S.cur=null;S.pend=[];S.nextId=0;S.result=null;
@@ -762,9 +762,9 @@ $('#ad-wipe').addEventListener('click',()=>{
 function renderTimeSel(){
   $('#t-free').setAttribute('aria-pressed',String(timeSel.free));$('#t-set').setAttribute('aria-pressed',String(!timeSel.free));
   $('#t-step').hidden=timeSel.free;$('#t-val').textContent=mins(timeSel.min);
-  $('#t-note').textContent=timeSel.free?t('t_note_free').replace('{n}',mins(Math.round(ROUTE_S/60))):(timeSel.min*60*.88<ROUTE_S?t('t_note_fast'):t('t_note_ok'));
+  $('#t-note').textContent=timeSel.free?t('t_note_free').replace('{n}',mins(Math.round(ROUTE_S/60))):t('t_note_limit');
 }
-const setTime=p=>{Object.assign(timeSel,p);store.set('b01sim.timeq',timeSel);renderTimeSel();};
+const setTime=p=>{Object.assign(timeSel,p);store.set('b01sim.tlim',timeSel);renderTimeSel();};
 $('#t-free').addEventListener('click',()=>setTime({free:true}));
 $('#t-set').addEventListener('click',()=>setTime({free:false}));
 $('#t-minus').addEventListener('click',()=>setTime({min:Math.max(1,timeSel.min-1)}));
@@ -857,7 +857,6 @@ function autoDecide(tg){
   const e=ev(tg),K=tg.kind,moveKnown=!!e.rows[4][1];
   const kind=!tg.crossed&&!e.cons&&((K==='mine'&&e.conf<80)||(K==='fish'&&!moveKnown))?'cross':(K==='fish'&&moveKnown?'clear':'hand');
   const prev=S.cur;S.cur=tg;decide(kind);S.cur=prev;aiNote(tg,kind);
-  FX.slowT=2;/* two seconds at real speed, even in a fast mission, so the moment can be seen */
   FX.flashT=1.3;FX.bigPing=true;const bd=document.body;bd.classList.remove('det');void bd.offsetWidth;bd.classList.add('det');setTimeout(()=>bd.classList.remove('det'),1400);
 }
 /* a small card per AI decision, newest on top; a click opens the target's evidence */
@@ -960,7 +959,7 @@ function updateCamera(dt,tt){
     const off=want.clone().sub(look),L=off.length()||1,r=clamp(L*CAMU.zoom,6,60),az=Math.atan2(off.x,off.z)+CAMU.yaw,el=clamp(Math.asin(clamp(off.y/L,-1,1))+CAMU.pitch,-1.2,1.45);
     want=look.clone().add(new THREE.Vector3(Math.sin(az)*Math.cos(el)*r,Math.sin(el)*r,Math.cos(az)*Math.cos(el)*r));
   }
-  const k=clamp(dt*(CAMU.drag?9:2.4*(FX.slowT>0?1:Math.max(1,S.k))),0,1);/* in a fast mission the camera keeps up */camPos.lerp(want,k);camLook.lerp(look,k);
+  const k=clamp(dt*(CAMU.drag?9:2.4),0,1);camPos.lerp(want,k);camLook.lerp(look,k);
   camera.position.copy(camPos);camera.lookAt(camLook);sky.position.copy(camera.position);
 }
 const CAMU={on:false,yaw:0,pitch:0,zoom:1,last:0,drag:null},cv3=renderer.domElement;
@@ -1146,7 +1145,7 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;window.__b01Frames=(window.__b01Frames||0)+1;
   /* time compression: several fixed sub-steps per frame, so turns and detection behave the same at any speed */
   if(FX.slowT>0)FX.slowT-=dt;
-  if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=FX.slowT>0?dt*.35:dt*S.k,n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
+  if((S.mode==='attract'||S.mode==='play')&&!S.paused){const sd=dt*S.k*(FX.slowT>0?.2:1),n=Math.max(1,Math.ceil(sd*30));for(let i=0;i<n&&!S.paused&&(S.mode==='attract'||S.mode==='play');i++)step(sd/n);}
   else if((S.mode==='brief'||S.mode==='login')&&S.auto)step(dt);
   if(S.mode==='attract'){S.capT+=dt;if(S.capT>6.5){S.capT=0;S.capIdx=(S.capIdx+1)%6;$('#cap-text').textContent=t('a'+(S.capIdx+1));}}
   /* back to the attract demo after 60 s without input, on any screen; a mission running on autopilot is left to finish */
