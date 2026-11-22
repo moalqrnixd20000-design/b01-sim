@@ -50,6 +50,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .ibtn{display:grid;place-items:center;min-width:46px;min-height:44px;padding:0 11px;background:var(--veil);color:var(--fg)}
 .ibtn svg{width:22px;height:22px}
 .ibtn:hover{background:var(--facet)}
+/* speaker: a cross while sound is off, sound waves in the map's teal while it is on */
+.snd .w{display:none}.snd.on .w{display:inline}.snd.on .x{display:none}.snd.on{color:var(--sea-hi)}
+.mn-end{display:flex;gap:8px;align-items:stretch}
+#ad-vol{accent-color:var(--sea-hi);width:min(320px,100%)}
 .brand{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:5px 14px;background:var(--veil);font-size:14px;font-weight:600;line-height:1.3}
 .brand small{font-weight:400;font-size:11px;color:var(--fg-3)}
 /* the mission instrument: four readings in one plate, split by hairlines */
@@ -327,6 +331,8 @@ body.menu .hud,body.menu #hint,body.menu #ai-notes,body.menu #caption{display:no
 #how-keys>span{display:flex;align-items:center;gap:6px}
 #how-keys p{margin:0;font-size:14px;color:var(--fg)}
 kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 7px;font:600 12px var(--f-text);color:var(--fg);background:var(--facet);box-shadow:inset 0 -2px 0 var(--chine-2),inset 0 0 0 1px var(--chine-2)}
+/* the smallest phones: the language is switched from the main menu */
+@media (max-width:400px){#b-lang{display:none}}
 @media (max-width:640px){
   .mn-modes{grid-template-columns:minmax(0,1fr)}
   .mode-art{height:112px}
@@ -346,7 +352,7 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
 .best li.me{color:var(--sea-hi)}
 
 /* narrower screens: the mission instrument takes the first row, the name and the buttons the second */
-@media (max-width:1010px){
+@media (max-width:1066px){
   .top{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"mission mission mission" "brand . ctrl";row-gap:6px}
   .mission{justify-self:center}
 }
@@ -385,7 +391,10 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
 /* phones on their side: one size smaller, so the touch buttons at the bottom keep their space */
 @media (max-height:500px){
   .m{padding:4px 10px}.m .val{min-height:18px}
-  .cbar{width:84px}
+  .cbar{width:70px}
+  .ibtn{min-width:40px;padding:0 9px}
+  /* the language is switched from the main menu on a phone on its side, so the bar keeps to one row */
+  .playing #b-lang{display:none}
   .btn{min-height:36px;padding:0 11px}
   /* while playing, the bar keeps to one row: the instrument and the buttons; the name is on the briefing */
   .playing .top{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand mission ctrl"}
@@ -422,6 +431,7 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
       <button class="btn" id="b-cam" data-t="cam">الكاميرا</button>
       <button class="btn" id="b-lang">English</button>
     </div>
+    <button class="ibtn plate snd" id="b-snd" aria-pressed="false" aria-label="تشغيل الصوت"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.4h3.3L12 5.5v13l-4.7-3.9H4z" fill="currentColor"/><path class="w" d="M15.3 9.1a4.1 4.1 0 0 1 0 5.8M17.8 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="x" d="M15.6 9.6l4.8 4.8m0-4.8-4.8 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     <button class="ibtn plate" id="b-home" data-tl="ib_home" aria-label="القائمة الرئيسية"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 11.3 12 4.2l8.4 7.1M6 9.6V20h4.4v-5.4h3.2V20H18V9.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
   </div>
 </header>
@@ -453,7 +463,10 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
 <div class="menu" id="o-menu" hidden>
   <div class="mn-top">
     <button class="ibtn plate" id="mn-help" data-tl="ib_help" aria-label="كيف تلعب"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.4 9.5a2.7 2.7 0 1 1 3.8 2.5c-.8.4-1.2 1-1.2 1.8v.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></svg></button>
-    <button class="mn-lang plate" id="mn-lang">English</button>
+    <div class="mn-end">
+      <button class="ibtn plate snd" id="mn-snd" aria-pressed="false" aria-label="تشغيل الصوت"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.4h3.3L12 5.5v13l-4.7-3.9H4z" fill="currentColor"/><path class="w" d="M15.3 9.1a4.1 4.1 0 0 1 0 5.8M17.8 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="x" d="M15.6 9.6l4.8 4.8m0-4.8-4.8 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button class="mn-lang plate" id="mn-lang">English</button>
+    </div>
   </div>
   <div class="mn-body">
     <h1 class="mn-title" dir="ltr">B01</h1>
@@ -631,6 +644,7 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
     <div class="ad-tw"><table class="ad-t"><thead><tr><th>الآيدي</th><th>الصفة</th><th>المسح والمدة</th><th>التقييم</th><th>الملاحظة</th><th>البداية</th><th>المدة</th><th>النقاط</th><th>قرارات صحيحة</th><th>الحالة</th><th>مكان الحفظ</th></tr></thead><tbody id="ad-rows"></tbody></table></div>
     <p id="ad-empty" hidden>ما فيه جلسات مسجّلة للحين.</p>
     <details class="ad-set"><summary>الإعدادات وربط Google Sheets</summary>
+      <label class="fld"><span>مستوى الصوت في البوث (لما يكون الصوت شغّال)</span><input id="ad-vol" type="range" min="0" max="100" step="5"></label>
       <label class="fld"><span>رابط Google Sheets (Web app URL)</span><input id="ad-url" class="field ltr" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
       <label class="fld"><span>المفتاح السري (نفس SECRET في السكربت)</span><input id="ad-key" class="field ltr" type="password" autocomplete="off"></label>
       <div class="row"><button class="cta alt" id="ad-save">حفظ واختبار الاتصال</button><button class="cta alt" id="ad-sync">إرسال المحفوظ الآن</button></div>
@@ -641,7 +655,7 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
 </div>
 
 <!-- the version number makes every update load the matching game file, never an old one from the browser cache -->
-<script type="module" src="js/game.js?v=2026-11-23a"></script>
+<script type="module" src="js/game.js?v=2026-11-23s1"></script>
 <script>
 /* if the simulator has not drawn a frame 10 s after the page opened (an old cached file, or an error),
    show a clean-reload button instead of a black screen */

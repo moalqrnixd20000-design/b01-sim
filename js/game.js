@@ -2,6 +2,7 @@
    One vessel, one survey area and four targets that follow the auv-platform demo:
    a possible moored mine, a likely wreck, an unknown object and marine life. All data is simulated. */
 import * as THREE from '../vendor/three.module.min.js';
+import {createAudio} from './audio.js';
 
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -9,7 +10,7 @@ const D2R=Math.PI/180;
 const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;};
 /* BETA=true turns a copy into a test version: it keeps its own saved data (b01beta.*), apart from the main
    simulator on the same site, and tags its sessions «تجريبي». The main version runs with false. */
-const BETA=false,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
+const BETA=true,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
 const store={get(k,d){try{const v=localStorage.getItem(KEY(k));return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(KEY(k),JSON.stringify(v));}catch(e){}}};
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
@@ -69,7 +70,8 @@ ar:{title:'محاكاة مهمة B01',sim:'بيانات محاكاة، الزم�
  how_keys:'التحكم',k_steer:'توجيه',k_speed:'السرعة',k_auto:'طيار آلي',k_cam:'الكاميرا',k_drag:'اسحب بالماوس لتدوير الكاميرا',k_space:'مسافة',how_ok:'فهمت',
  home_t:'ترجع للقائمة الرئيسية؟',home_b:'المهمة الحالية تنتهي هنا.',home_go:'ارجع للقائمة',home_stay:'كمّل المهمة',ib_home:'القائمة الرئيسية',ib_help:'كيف تلعب',
  lg_back:'رجوع',ai_crossB:'يحتاج اتجاهًا ثانيًا: التمريرة الثانية تمرّ فوقه',b_title_sv:'مهمتك: {s}',
- t_note_quick:'المسح السريع بالطيار الآلي يأخذ نحو دقيقتين، والوقت يتوقف وأنت تقرأ حزمة التسليم.'},
+ t_note_quick:'المسح السريع بالطيار الآلي يأخذ نحو دقيقتين، والوقت يتوقف وأنت تقرأ حزمة التسليم.',
+ snd_on:'تشغيل الصوت',snd_off:'كتم الصوت',k_snd:'زر السماعة يشغّل الصوت ويكتمه'},
 en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',left:'Left',cov:'Coverage',tgs:'Targets',speed:'Speed',batt:'Battery',score:'Score',auto:'Autopilot',cam:'Camera',map:'Survey area',sonar:'Water column, multibeam',dead:'Dead zone',
  press:'Press any key or touch the screen to take control',keys:'Arrows steer, Space autopilot, C camera, drag to turn the view',
  a1:'B01 is a low-signature surface vehicle surveying a port approach for mines.',
@@ -123,18 +125,22 @@ en:{title:'B01 mission simulator',sim:'Simulated data, time ×{x}',time:'Time',l
  how_keys:'Controls',k_steer:'Steer',k_speed:'Speed',k_auto:'Autopilot',k_cam:'Camera',k_drag:'Drag with the mouse to turn the view',k_space:'Space',how_ok:'Got it',
  home_t:'Back to the main menu?',home_b:'The current mission ends here.',home_go:'Go to the menu',home_stay:'Keep playing',ib_home:'Main menu',ib_help:'How to play',
  lg_back:'Back',ai_crossB:'Needs a second heading: the second pass will cross it',b_title_sv:'Your mission: {s}',
- t_note_quick:'A quick survey on autopilot takes about 2 minutes; the clock stops while you read a handover package.'}};
+ t_note_quick:'A quick survey on autopilot takes about 2 minutes; the clock stops while you read a handover package.',
+ snd_on:'Sound on',snd_off:'Mute',k_snd:'The speaker button turns sound on and off'}};
 let lang=store.get('b01sim.lang','ar');
 const t=k=>(T[lang]&&T[lang][k]!=null)?T[lang][k]:(T.ar[k]!=null?T.ar[k]:k);
 const mins=n=>lang==='ar'?(n===1?'دقيقة واحدة':n===2?'دقيقتان':n<=10?n+' دقائق':n+' دقيقة'):n+' min';
 const TOUCH=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
 document.body.classList.toggle('touch-ui',TOUCH);
+/* sound: off until the visitor or the booth turns it on with the speaker button (js/audio.js). Off means no
+   audio output is ever opened; on, it opens with the first click or key and sleeps when there is nothing to hear */
+const SND=createAudio();let sndOn=!!store.get('b01sim.snd',false);SND.setVolume(store.get('b01sim.vol',80)/100);if(sndOn)SND.on(false);
 function applyLang(){
   document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
   document.querySelectorAll('[data-t]').forEach(el=>{el.textContent=t(el.dataset.t);});
   document.querySelectorAll('[data-tl]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.tl));});
   $('#b-lang').textContent=$('#mn-lang').textContent=lang==='ar'?'English':'العربية';
-  renderBriefTitle();renderHow();
+  renderBriefTitle();renderHow();renderSnd();
   $('#br-ctrl').textContent=TOUCH?t('b_touch'):t('b_keys');
   setSimLabel();renderTimeSel();renderLogin();if(!$('#o-fb').hidden)renderStars();renderTour();
   if(S.mode==='attract')$('#cap-text').textContent=t('a'+(S.capIdx+1));
@@ -481,10 +487,11 @@ function updateWake(tt,b,bp){
 /* sonar pulses: a ring spreading on the water under B01 every 4 s, a big coral one on a detection */
 const pings=[0,1,2].map(()=>{const m=new THREE.Mesh(new THREE.RingGeometry(.92,1,64).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x8fd6cf,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
   m.visible=false;m.frustumCulled=false;scene.add(m);return {m,t:9,big:false};});
-let pingT=0;
+let pingT=0,pingN=0;
 function updatePings(dt,tt,bp){
   pingT+=dt;
   if(FX.bigPing||pingT>4){const p=pings.reduce((a,c)=>c.t>a.t?c:a);p.t=0;p.big=FX.bigPing;p.m.position.set(bp.x,.2,bp.z);p.m.material.color.setHex(p.big?0xff6b45:0x8fd6cf);p.m.visible=true;
+    if(S.mode==='play'&&!S.paused&&(p.big||(pingN++&1)===0))SND.play(p.big?'detect':'ping');
     FX.bigPing=false;pingT=0;}
   for(const p of pings){if(!p.m.visible)continue;p.t+=dt;const u=p.t/2.6;if(u>=1){p.m.visible=false;continue;}
     const r=1+u*(p.big?40:26);p.m.scale.set(r,1,r);p.m.position.y=waveH(p.m.position.x,p.m.position.z,tt)+.12;p.m.material.opacity=(p.big?.8:.38)*(1-u);}
@@ -528,6 +535,14 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyC')toggleCam();
 });
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k)press(k,0);});
+/* the browser lets sound play only after a click or key on the page */
+addEventListener('pointerdown',()=>SND.gesture(),true);addEventListener('keydown',()=>SND.gesture(),true);
+/* a soft click for buttons; the decisions and the speaker button have their own sounds */
+addEventListener('click',e=>{const bt=e.target.closest&&e.target.closest('button');if(bt&&!bt.closest('#h-act')&&!bt.classList.contains('snd'))SND.play('click');},true);
+/* the speaker buttons, in the menu and in the top bar, show the same state */
+function renderSnd(){document.querySelectorAll('.snd').forEach(b=>{b.classList.toggle('on',sndOn);b.setAttribute('aria-pressed',String(sndOn));const l=t(sndOn?'snd_off':'snd_on');b.setAttribute('aria-label',l);b.title=l;});}
+function toggleSnd(){sndOn=!sndOn;store.set('b01sim.snd',sndOn);if(sndOn){SND.on(true);SND.play('on');}else SND.off();renderSnd();S.lastInput=performance.now();}
+document.querySelectorAll('.snd').forEach(b=>b.addEventListener('click',toggleSnd));
 addEventListener('pointerdown',e=>{if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
 function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;if(S.goal){S.goal=null;S.queue=[];}$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
 function releaseKeys(){S.keys={left:0,right:0,up:0,down:0};document.querySelectorAll('.tbtn.on').forEach(b=>b.classList.remove('on'));}
@@ -605,8 +620,8 @@ $('#b-lg-back').addEventListener('click',()=>{S.lastInput=performance.now();$('#
 let howResume=false,homeResume=false;
 function renderHow(){
   const el=$('#how-keys');if(!el)return;
-  el.innerHTML=TOUCH?'<p>'+t('b_touch')+'</p>':
-    '<span><kbd>←</kbd><kbd>→</kbd>'+t('k_steer')+'</span><span><kbd>↑</kbd><kbd>↓</kbd>'+t('k_speed')+'</span><span><kbd>'+t('k_space')+'</kbd>'+t('k_auto')+'</span><span><kbd>C</kbd>'+t('k_cam')+'</span><span>'+t('k_drag')+'</span>';
+  el.innerHTML=TOUCH?'<p>'+t('b_touch')+'</p><p>'+t('k_snd')+'</p>':
+    '<span><kbd>←</kbd><kbd>→</kbd>'+t('k_steer')+'</span><span><kbd>↑</kbd><kbd>↓</kbd>'+t('k_speed')+'</span><span><kbd>'+t('k_space')+'</kbd>'+t('k_auto')+'</span><span><kbd>C</kbd>'+t('k_cam')+'</span><span>'+t('k_drag')+'</span><span>'+t('k_snd')+'</span>';
 }
 function openHow(){S.lastInput=performance.now();if(S.mode==='play'&&!S.paused){S.paused=true;releaseKeys();howResume=true;}renderHow();$('#o-how').hidden=false;$('#how-ok').focus({preventScroll:true});}
 function closeHow(){$('#o-how').hidden=true;S.lastInput=performance.now();if(howResume){howResume=false;S.paused=false;}if(!$('#o-menu').hidden)$('#mn-how').focus({preventScroll:true});}
@@ -768,7 +783,7 @@ $('#pin-go').addEventListener('click',pinGo);
 $('#pin-x').addEventListener('click',()=>{$('#o-pin').hidden=true;S.lastInput=performance.now();});
 function closeAdmin(){$('#o-pin').hidden=true;$('#o-admin').hidden=true;S.lastInput=performance.now();}
 function openAdmin(){
-  const c=sheetCfg();$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
+  const c=sheetCfg();$('#ad-vol').value=store.get('b01sim.vol',80);$('#ad-url').value=c.url||'';$('#ad-key').value=c.key||'';$('#ad-set-msg').textContent='';
   /* with the admin key saved, the panel opens on all devices: that is what the team reads */
   if($('#o-admin').hidden)AD.src=c.key?'all':'local';$('#o-admin').hidden=false;$('#o-admin .card').scrollTop=0;loadAdmin();$('#ad-close').focus();
 }
@@ -843,6 +858,7 @@ $('#ad-sync').addEventListener('click',async()=>{
   loadAdmin();
 });
 $('#ad-pin').addEventListener('click',()=>showPin('change'));
+$('#ad-vol').addEventListener('input',e=>{const v=+e.target.value;store.set('b01sim.vol',v);SND.setVolume(v/100);});
 $('#ad-best').addEventListener('click',()=>{if(confirm('تصفير لوحة أفضل النتائج على هذا الجهاز؟ لا يمكن التراجع.')){store.set('b01sim.best',[]);store.set('b01sim.best.quick',[]);}});
 $('#ad-wipe').addEventListener('click',()=>{
   const a=sessions().filter(r=>r.status!=='open'),pend=a.filter(r=>!r.synced).length;
@@ -925,9 +941,9 @@ function planCross(tg){
   tg.viaB=SURVEY==='quick'&&S.auto&&!S.goal&&tg.obs[0].axis===1&&S.wp<2*NA+2;if(tg.viaB)return;
   S.queue=[wide,E1,E2,resume];S.legFrom=[bt.x,bt.y];S.routeDone=false;S.goal=null;
 }
-$('#d-hand').addEventListener('click',()=>decide('hand'));
-$('#d-cross').addEventListener('click',()=>decide('cross'));
-$('#d-clear').addEventListener('click',()=>decide('clear'));
+$('#d-hand').addEventListener('click',()=>{decide('hand');SND.play('confirm');});
+$('#d-cross').addEventListener('click',()=>{decide('cross');SND.play('cross');});
+$('#d-clear').addEventListener('click',()=>{decide('clear');SND.play('confirm');});
 $('#d-cont').addEventListener('click',()=>{$('#o-hand').hidden=true;S.cur=null;S.lastInput=performance.now();
   if(!S.tg.some(x=>x.state==='cross'))crossGuide.visible=false;
   if(S.pend.length)setTimeout(nextHand,250);else S.paused=false;});
@@ -967,7 +983,7 @@ function endMission(){
   const covPct=Math.round(S.covPct*100),ok=S.tg.filter(x=>x.dec&&x.dec===GOOD[x.kind]).length,total=Math.max(0,Math.round(S.score+covPct*3));
   const BK='b01sim.best'+(SURVEY==='quick'?'.quick':''),best=store.get(BK,[]);const me={s:total,c:covPct,d:Date.now(),n:S.visitor||''};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set(BK,top);
   S.result={total,covPct,ok,real:S.real,top,me:me.d};noteMission();
-  renderResults();$('#o-res').hidden=false;$('#b-rate').focus();showControls();updateHud(true);
+  renderResults();$('#o-res').hidden=false;$('#b-rate').focus();showControls();updateHud(true);SND.play('done');
 }
 function renderResults(){
   const R=S.result;if(!R)return;
@@ -1265,6 +1281,7 @@ function updateRope(o,ax,az,mp,dt,tt){
 /* ---------------- main loop ---------------- */
 let last=performance.now(),wcdT=0,mmT=0,fpsAcc=0,fpsN=0,fpsChecked=false,startT=performance.now();
 const v3=new THREE.Vector3();
+let sndT=0;const sndV=new THREE.Vector3();
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;const tt=now/1000;window.__b01Frames=(window.__b01Frames||0)+1;
   /* time compression: several fixed sub-steps per frame, so turns and detection behave the same at any speed */
@@ -1281,6 +1298,7 @@ function frame(now){
   ud.props.forEach((p,i)=>{p.rotation.x+=(i?1:-1)*dt*(3+b.v*14);});
   sun.position.set(bp.x-16,22,bp.z+9);sun.target.position.copy(bp);
   updateOcean(tt,bp.x,bp.z);updateCamera(dt,tt);updateFx(dt,tt,b,bp);updatePings(dt,tt,bp);
+  if(SND.active&&now-sndT>100){sndT=now;sndV.copy(b01.position).applyMatrix4(camera.matrixWorldInverse);SND.update({mode:S.mode,paused:S.paused,v:S.boat.v/MAXV,uw:FX.uw,vessel:sndV});}
   const fl=FX.flashT>0?clamp((FX.flashT-=dt)/1.3,0,1):0;ud.fan[0].material.color.setHex(0x8fd6cf).lerp(CORAL,fl);ud.fan[0].material.opacity=.2+.3*fl;
   for(const tg of S.tg){const o=T3[tg.kind],[px,py]=tpos(tg,S.time);o.g.position.copy(W(px,py,o.y));o.ring.position.copy(W(px,py,1.1));if(o.ring.visible)o.ring.rotation.z=tt*.6;
     if(tg.kind==='mine'){o.g.position.y=o.y+Math.sin(tt*.8)*.15;const g0=W(tg.x,tg.y,0);updateRope(o,g0.x,g0.z,o.g.position,dt,tt);}
@@ -1294,7 +1312,7 @@ function frame(now){
 }
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 /* test hook: advance the simulation without animation frames (used for checks while the window is hidden) */
-window.__b01={S,decide,startPlay,toAttract,openBrief,setSurvey,SURVEYS,PICK,openMenu,chooseSurvey,openHow,homeAsk,get survey(){return SURVEY;},get route(){return S.route;},ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
+window.__b01={SND,get sndOn(){return sndOn;},toggleSnd,S,decide,startPlay,toAttract,openBrief,setSurvey,SURVEYS,PICK,openMenu,chooseSurvey,openHow,homeAsk,get survey(){return SURVEY;},get route(){return S.route;},ev,timeSel,setTime,drawFlag,drawEmblem,openLogin,doLogin,openFeedback,FB,setStars,sessions,syncNow,openAdminGate,pinGo,loadAdmin,AD,human,PH,FX,CAMU,
   get wake(){const c=wkGeo.attributes.color.array;return {n:wakePts.length,count:wkGeo.drawRange.count,alpha:[3,7,11,15,35,39,43,47,203,207].map(i=>+c[i].toFixed(2))};},
   phys(sec,v){const b=S.boat,bp=W(b.x,b.y,0),out=[];let tt=performance.now()/1000;if(v!=null)b.v=v;for(let i=0;i<sec*60;i++){tt+=1/60;buoyancy(1/60,tt,b,bp);if(i%30===29)out.push([PH.y.toFixed(2),(PH.p*57.3).toFixed(1),(PH.r*57.3).toFixed(1)].join('/'));}return out.join(' ');},
   get sess(){return sess;},
