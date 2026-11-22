@@ -2,7 +2,7 @@
    One vessel, one survey area and four targets that follow the auv-platform demo:
    a possible moored mine, a likely wreck, an unknown object and marine life. All data is simulated. */
 import * as THREE from '../vendor/three.module.min.js';
-import {createAudio} from './audio.js?v=2026-11-23s2';/* same version as game.js in index.html: bump both on every deploy */
+import {createAudio} from './audio.js?v=2026-11-23b';/* same version as game.js in index.html: bump both on every deploy */
 
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -10,7 +10,7 @@ const D2R=Math.PI/180;
 const wrapPi=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a;};
 /* BETA=true turns a copy into a test version: it keeps its own saved data (b01beta.*), apart from the main
    simulator on the same site, and tags its sessions «تجريبي». The main version runs with false. */
-const BETA=true,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
+const BETA=false,KEY=k=>BETA?String(k).replace(/^b01sim\./,'b01beta.'):k;
 const store={get(k,d){try{const v=localStorage.getItem(KEY(k));return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(KEY(k),JSON.stringify(v));}catch(e){}}};
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
