@@ -2,7 +2,7 @@
    One vessel, one survey area and four targets that follow the auv-platform demo:
    a possible moored mine, a likely wreck, an unknown object and marine life. All data is simulated. */
 import * as THREE from '../vendor/three.module.min.js';
-import {createAudio} from './audio.js?v=2026-11-23s1';/* same version as game.js in index.html: bump both on every deploy */
+import {createAudio} from './audio.js?v=2026-11-23s2';/* same version as game.js in index.html: bump both on every deploy */
 
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -487,11 +487,10 @@ function updateWake(tt,b,bp){
 /* sonar pulses: a ring spreading on the water under B01 every 4 s, a big coral one on a detection */
 const pings=[0,1,2].map(()=>{const m=new THREE.Mesh(new THREE.RingGeometry(.92,1,64).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x8fd6cf,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
   m.visible=false;m.frustumCulled=false;scene.add(m);return {m,t:9,big:false};});
-let pingT=0,pingN=0;
+let pingT=0;
 function updatePings(dt,tt,bp){
   pingT+=dt;
   if(FX.bigPing||pingT>4){const p=pings.reduce((a,c)=>c.t>a.t?c:a);p.t=0;p.big=FX.bigPing;p.m.position.set(bp.x,.2,bp.z);p.m.material.color.setHex(p.big?0xff6b45:0x8fd6cf);p.m.visible=true;
-    if(S.mode==='play'&&!S.paused&&(p.big||(pingN++&1)===0))SND.play(p.big?'detect':'ping');
     FX.bigPing=false;pingT=0;}
   for(const p of pings){if(!p.m.visible)continue;p.t+=dt;const u=p.t/2.6;if(u>=1){p.m.visible=false;continue;}
     const r=1+u*(p.big?40:26);p.m.scale.set(r,1,r);p.m.position.y=waveH(p.m.position.x,p.m.position.z,tt)+.12;p.m.material.opacity=(p.big?.8:.38)*(1-u);}
@@ -537,11 +536,9 @@ addEventListener('keydown',e=>{
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k)press(k,0);});
 /* the browser lets sound play only after a click or key on the page */
 addEventListener('pointerdown',()=>SND.gesture(),true);addEventListener('keydown',()=>SND.gesture(),true);
-/* a soft click for buttons; the decisions and the speaker button have their own sounds */
-addEventListener('click',e=>{const bt=e.target.closest&&e.target.closest('button');if(bt&&!bt.closest('#h-act')&&!bt.classList.contains('snd'))SND.play('click');},true);
 /* the speaker buttons, in the menu and in the top bar, show the same state */
 function renderSnd(){document.querySelectorAll('.snd').forEach(b=>{b.classList.toggle('on',sndOn);b.setAttribute('aria-pressed',String(sndOn));const l=t(sndOn?'snd_off':'snd_on');b.setAttribute('aria-label',l);b.title=l;});}
-function toggleSnd(){sndOn=!sndOn;store.set('b01sim.snd',sndOn);if(sndOn){SND.on(true);SND.play('on');}else SND.off();renderSnd();S.lastInput=performance.now();}
+function toggleSnd(){sndOn=!sndOn;store.set('b01sim.snd',sndOn);if(sndOn)SND.on(true);else SND.off();renderSnd();S.lastInput=performance.now();}
 document.querySelectorAll('.snd').forEach(b=>b.addEventListener('click',toggleSnd));
 addEventListener('pointerdown',e=>{if(adminOpen())return;if(S.mode==='attract'&&!e.target.closest('button')){anyInput();}else S.lastInput=performance.now();});
 function press(k,on){S.keys[k]=on;if(on&&(k==='left'||k==='right')&&S.auto){S.auto=false;if(S.goal){S.goal=null;S.queue=[];}$('#b-auto').setAttribute('aria-pressed','false');toast(t('takeover'));}}
@@ -941,9 +938,9 @@ function planCross(tg){
   tg.viaB=SURVEY==='quick'&&S.auto&&!S.goal&&tg.obs[0].axis===1&&S.wp<2*NA+2;if(tg.viaB)return;
   S.queue=[wide,E1,E2,resume];S.legFrom=[bt.x,bt.y];S.routeDone=false;S.goal=null;
 }
-$('#d-hand').addEventListener('click',()=>{decide('hand');SND.play('confirm');});
-$('#d-cross').addEventListener('click',()=>{decide('cross');SND.play('cross');});
-$('#d-clear').addEventListener('click',()=>{decide('clear');SND.play('confirm');});
+$('#d-hand').addEventListener('click',()=>decide('hand'));
+$('#d-cross').addEventListener('click',()=>decide('cross'));
+$('#d-clear').addEventListener('click',()=>decide('clear'));
 $('#d-cont').addEventListener('click',()=>{$('#o-hand').hidden=true;S.cur=null;S.lastInput=performance.now();
   if(!S.tg.some(x=>x.state==='cross'))crossGuide.visible=false;
   if(S.pend.length)setTimeout(nextHand,250);else S.paused=false;});
@@ -983,7 +980,7 @@ function endMission(){
   const covPct=Math.round(S.covPct*100),ok=S.tg.filter(x=>x.dec&&x.dec===GOOD[x.kind]).length,total=Math.max(0,Math.round(S.score+covPct*3));
   const BK='b01sim.best'+(SURVEY==='quick'?'.quick':''),best=store.get(BK,[]);const me={s:total,c:covPct,d:Date.now(),n:S.visitor||''};best.push(me);best.sort((a,b)=>b.s-a.s);const top=best.slice(0,5);store.set(BK,top);
   S.result={total,covPct,ok,real:S.real,top,me:me.d};noteMission();
-  renderResults();$('#o-res').hidden=false;$('#b-rate').focus();showControls();updateHud(true);SND.play('done');
+  renderResults();$('#o-res').hidden=false;$('#b-rate').focus();showControls();updateHud(true);
 }
 function renderResults(){
   const R=S.result;if(!R)return;
