@@ -82,7 +82,7 @@ export function createAudio(){
   function ensure(){
     if(!want||hidden)return;
     if(!N){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;N=chain(new AC({latencyHint:'balanced'}),vol);load();}
-    else if(N.c.state==='suspended')N.c.resume();
+    else if(N.c.state==='suspended')N.c.resume().catch(()=>{});
     quietSince=0;
   }
   function play(name){
@@ -104,9 +104,9 @@ export function createAudio(){
     const p=st.vessel;if(p){const P=n.pan;if(P.positionX){P.positionX.setTargetAtTime(p.x,t,.05);P.positionY.setTargetAtTime(p.y,t,.05);P.positionZ.setTargetAtTime(p.z,t,.05);}else P.setPosition(p.x,p.y,p.z);}
     /* sleep when there has been nothing to hear for two seconds */
     const audible=t<n.busy||Object.keys(L).some(k=>L[k]>.001&&n.beds[k].src);
-    if(audible){quietSince=0;if(n.c.state==='suspended'&&!hidden)n.c.resume();}
+    if(audible){quietSince=0;if(n.c.state==='suspended'&&!hidden)n.c.resume().catch(()=>{});}
     else if(!quietSince)quietSince=performance.now();
-    else if(performance.now()-quietSince>SLEEP_MS&&n.c.state==='running')n.c.suspend();
+    else if(performance.now()-quietSince>SLEEP_MS&&n.c.state==='running')n.c.suspend().catch(()=>{});
   }
   function on(gesture){want=true;if(gesture)ensure();}
   /* off: the output closes completely */
@@ -115,7 +115,7 @@ export function createAudio(){
     try{n.out.gain.setTargetAtTime(0,n.c.currentTime,.03);}catch(e){}
     setTimeout(()=>{n.c.close().catch(()=>{});},180);
   }
-  document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(!N)return;if(hidden){if(N.c.state==='running')N.c.suspend();}else quietSince=0;});
+  document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(!N)return;if(hidden){if(N.c.state==='running')N.c.suspend().catch(()=>{});}else quietSince=0;});
   return {on,off,play,update,
     gesture(){if(want)ensure();},
     setVolume(x){vol=Math.max(0,Math.min(1,x));if(N)N.out.gain.setTargetAtTime(vol*.9,N.c.currentTime,.05);},

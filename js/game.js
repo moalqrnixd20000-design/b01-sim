@@ -2,7 +2,7 @@
    One vessel, one survey area and four targets that follow the auv-platform demo:
    a possible moored mine, a likely wreck, an unknown object and marine life. All data is simulated. */
 import * as THREE from '../vendor/three.module.min.js';
-import {createAudio} from './audio.js';
+import {createAudio} from './audio.js?v=2026-11-23s1';/* same version as game.js in index.html: bump both on every deploy */
 
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
